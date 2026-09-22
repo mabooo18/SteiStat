@@ -1,4 +1,4 @@
-# HunStat2 CV | E2_rcal10000_1
+# SteiStat CV | E2_rcal10000_1
 # v_start_mV=-200 v_stop_mV=200 estep_mV=5 scan_rate_mV_s=200 cycles=1
 # fRcal_set_ohm=10000 rtia_calibrated_ohm=5703.188
 # cell=we-C Randles Rs=560.0 Rct=10000.0 Cdl=3.3e-08

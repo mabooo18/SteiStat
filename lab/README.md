@@ -6,7 +6,7 @@ cell on the **we-C Randles branch** (Rs 560 Ω, Rct 10 kΩ 0.1 %, Cdl 33 nF),
 
 | File | Purpose |
 |------|---------|
-| `hunstat.py`   | serial driver for the firmware's ASCII protocol; every wait has a deadline |
+| `steistat.py`   | serial driver for the firmware's ASCII protocol; every wait has a deadline |
 | `campaign.py`  | the 37-sweep measurement campaign → `data/` |
 | `analyse.py`   | fits, statistics and figures → `results.json`, `../journal/paper/figures/` |
 | `fig_setup.py` | Figure 1 (signal chain + reference cell schematic) |

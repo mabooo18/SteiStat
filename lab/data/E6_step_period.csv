@@ -1,4 +1,4 @@
-# HunStat2 CV | E6 minimum viable step period, Estep=5 mV, -200..+200 mV
+# SteiStat CV | E6 minimum viable step period, Estep=5 mV, -200..+200 mV
 # fRcal_set_ohm=200.0
 scan_rate_mV_s,step_period_ms,n_points,R_ohm,r2
 200,25.000,164,10607.019,0.99999872

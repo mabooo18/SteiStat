@@ -1,8 +1,8 @@
 import statistics
-from hunstat import HunStat
+from steistat import SteiStat
 
 R_NOM = 10560.0
-hs = HunStat("COM8", boot_delay=4.0)
+hs = SteiStat("COM8", boot_delay=4.0)
 hs.send("@ 0"); hs.drain(0.3)
 print(f"{'step mV':>8} {'I_ss (A)':>13} {'expected':>13} {'err':>9} {'R_implied':>11}")
 for v in (-200, -100, -50, 50, 100, 200):

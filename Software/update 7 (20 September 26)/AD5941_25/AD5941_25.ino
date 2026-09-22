@@ -31,11 +31,11 @@
 #include "string.h"
 #include <Adafruit_NeoPixel.h>
 #include "utilities.h"
-#include "hunstat_status_utils.h"
+#include "steistat_status_utils.h"
 #include "src/ad5940/debug.h"
 
 // Project Modular Component Headers
-#include "hunstat_data_storage.h"
+#include "steistat_data_storage.h"
 #include "src/data_storage/measurement_buffer.h"
 #include "src/setup/ad5941_setup.h"
 #include "src/communication/communication.h"

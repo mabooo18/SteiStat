@@ -1,4 +1,4 @@
-"""Measurement campaign for the HunStat2 validation paper.
+"""Measurement campaign for the SteiStat validation paper.
 
 Everything is run against the we-C Randles branch of the external dummy cell
 (Rs = 560 ohm, Rct = 10 kohm 0.1%, Cdl = 33 nF), with RCAL1 = 200 ohm fitted.
@@ -15,7 +15,7 @@ import time
 
 import numpy as np
 
-from hunstat import HunStat
+from steistat import SteiStat
 
 DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 os.makedirs(DATA, exist_ok=True)
@@ -54,7 +54,7 @@ def run_cv(hs, tag, v0, v1, estep, scan, cycles=1, rcal=RCAL_FITTED):
 
     path = os.path.join(DATA, f"{tag}.csv")
     with open(path, "w", newline="") as fh:
-        fh.write(f"# HunStat2 CV | {tag}\n")
+        fh.write(f"# SteiStat CV | {tag}\n")
         fh.write(f"# v_start_mV={v0} v_stop_mV={v1} estep_mV={estep} "
                  f"scan_rate_mV_s={scan} cycles={cycles}\n")
         fh.write(f"# fRcal_set_ohm={rcal} rtia_calibrated_ohm={rtia}\n")
@@ -82,7 +82,7 @@ def banner(t):
     print(f"\n{'='*72}\n{t}\n{'='*72}")
 
 
-hs = HunStat("COM8", boot_delay=4.0)
+hs = SteiStat("COM8", boot_delay=4.0)
 hs.send("@ 0")
 hs.drain(0.3)
 t_start = time.time()

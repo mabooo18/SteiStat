@@ -1,7 +1,7 @@
 import numpy as np, statistics
-from hunstat import HunStat
+from steistat import SteiStat
 
-hs = HunStat("COM8", boot_delay=4.0)
+hs = SteiStat("COM8", boot_delay=4.0)
 hs.send("@ 0"); hs.drain(0.3)
 print("rcal now:", [l for l in hs.params() if "rcal" in l][:1])
 

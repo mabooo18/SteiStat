@@ -1,9 +1,9 @@
 import statistics
-from hunstat import HunStat
+from steistat import SteiStat
 
 RF = {0:"OPEN",1:"SHORT",2:"20K",3:"100K",4:"200K",5:"400K",6:"600K",7:"1M"}
 R_NOM = 10560.0
-hs = HunStat("COM8", boot_delay=4.0)
+hs = SteiStat("COM8", boot_delay=4.0)
 hs.send("@ 0"); hs.drain(0.3)
 print(f"{'Rf':>6} {'SW13':>5} | {'I(-200mV)':>12} {'I(+200mV)':>12} {'delta':>12} "
       f"{'R_from_delta':>13}")

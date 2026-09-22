@@ -12,7 +12,7 @@
 void C_DataStorage::Begin() {
 
     // --- System Status and Communication Mode Settings ---
-    SystemStatus            = HUNSTAT_WAITING;  // System defaults to idle waiting status
+    SystemStatus            = STEISTAT_WAITING;  // System defaults to idle waiting status
     SeeedStatMode           = false;            // Defaults to raw binary streaming format (false)
     Verbose                 = 0;                // Logs disabled by default
 

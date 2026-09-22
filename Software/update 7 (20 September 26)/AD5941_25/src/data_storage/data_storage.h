@@ -1,6 +1,6 @@
 /******************************************************************************
  * @file:    data_storage.h
- * @brief:   Centralized parameter and state storage for HunStat2
+ * @brief:   Centralized parameter and state storage for SteiStat
  *
  * Menggantikan semua variabel global di AD5941_25.ino dengan satu class
  * terpusat. Semua class lain menerima pointer ke C_DataStorage.
@@ -17,9 +17,9 @@
 // ---------------------------------------------------------------------------
 // System state constants
 // ---------------------------------------------------------------------------
-#define HUNSTAT_WAITING     0
-#define HUNSTAT_RUNNING     1
-#define HUNSTAT_DONE        2
+#define STEISTAT_WAITING     0
+#define STEISTAT_RUNNING     1
+#define STEISTAT_DONE        2
 
 // ---------------------------------------------------------------------------
 // Measurement mode constants
@@ -104,7 +104,7 @@ public:
     // -----------------------------------------------------------------------
     // System state
     // -----------------------------------------------------------------------
-    uint8_t  SystemStatus;          // HUNSTAT_WAITING / RUNNING / DONE
+    uint8_t  SystemStatus;          // STEISTAT_WAITING / RUNNING / DONE
     bool     SeeedStatMode;         // true = mode SeeedStat, false = LabVIEW
     uint32_t Verbose;               // bitmask verbosity (lihat dokumentasi)
 

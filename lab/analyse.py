@@ -1,4 +1,4 @@
-"""Analysis + figures for the HunStat2 validation paper.
+"""Analysis + figures for the SteiStat validation paper.
 
 Reads lab/data/*.csv (written by campaign.py) and emits
   lab/results.json          every number quoted in the manuscript

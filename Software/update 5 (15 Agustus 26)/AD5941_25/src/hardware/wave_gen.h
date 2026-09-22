@@ -1,5 +1,5 @@
-#ifndef HUNSTAT_WAVE_GEN_H
-#define HUNSTAT_WAVE_GEN_H
+#ifndef STEISTAT_WAVE_GEN_H
+#define STEISTAT_WAVE_GEN_H
 
 #include <Arduino.h>
 #include "../../AD5940.h"

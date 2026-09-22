@@ -1,5 +1,5 @@
-#ifndef HUNSTAT_GAIN_CONTROL_H
-#define HUNSTAT_GAIN_CONTROL_H
+#ifndef STEISTAT_GAIN_CONTROL_H
+#define STEISTAT_GAIN_CONTROL_H
 
 #include <Arduino.h>
 

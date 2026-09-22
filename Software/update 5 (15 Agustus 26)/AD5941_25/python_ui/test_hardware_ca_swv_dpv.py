@@ -34,7 +34,7 @@ DPV_LINE_RE = re.compile(r"^DPV,([-+]?\d*\.?\d+),([-+]?\d*\.?\d+[eE][-+]?\d+)$")
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Test round-trip CA/SWV/DPV lewat firmware HunStat2 tanpa pernah hang.",
+        description="Test round-trip CA/SWV/DPV lewat firmware SteiStat tanpa pernah hang.",
     )
     parser.add_argument("port", nargs="?", help="Port serial, misalnya COM8")
     parser.add_argument("--baud", type=int, default=1_000_000, help="Baud rate firmware (default: 1000000)")
@@ -131,7 +131,7 @@ def main():
                 print("Tidak ada port serial yang terdeteksi.", file=sys.stderr)
             return 2
 
-    print("HunStat2 CA/SWV/DPV round-trip test")
+    print("SteiStat CA/SWV/DPV round-trip test")
     print(f"Port: {selected_port} | Baud: {args.baud}")
     print("Catatan: script ini punya batas waktu di setiap langkah, jadi TIDAK AKAN pernah nge-hang.")
 
@@ -156,7 +156,7 @@ def main():
                 print(f"    GAGAL: board tidak membalas '?' sama sekali dalam {args.probe_timeout:.1f}s.")
                 print("    Kemungkinan penyebab, cek satu per satu:")
                 print("      1. Port/baud salah (pastikan sama dengan Serial.begin() di firmware, 1000000).")
-                print("      2. Firmware yang ter-flash bukan versi source ini (misal masih HunStat2.ino.ino lama).")
+                print("      2. Firmware yang ter-flash bukan versi source ini (misal masih SteiStat.ino.ino lama).")
                 print("      3. Board sedang macet di inisialisasi AD5941 (cek LED status di board).")
                 print("      4. Kabel USB cuma charging-only (tidak ada jalur data).")
                 return 1

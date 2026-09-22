@@ -1,8 +1,8 @@
 import cmath, sys
-from hunstat import HunStat
+from steistat import SteiStat
 
 f_lo, f_hi, n, rcal = 10.0, 200000.0, 25, 10000.0
-hs = HunStat("COM8")
+hs = SteiStat("COM8")
 pts = hs.eis(f_lo, f_hi, n, rcal)
 hs.close()
 print(f"got {len(pts)} points\n")

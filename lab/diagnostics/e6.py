@@ -1,7 +1,7 @@
 """E6: locate the minimum viable potential-step period (Estep / scan rate)."""
 import os
 import numpy as np
-from hunstat import HunStat
+from steistat import SteiStat
 
 DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 R_DC_NOM, RCAL = 10560.0, 200.0
@@ -32,7 +32,7 @@ def probe(hs, scan):
     return len(pts), R, r2, errs
 
 
-hs = HunStat("COM8", boot_delay=5.0)
+hs = SteiStat("COM8", boot_delay=5.0)
 hs.send("@ 0"); hs.drain(0.5)
 rows = []
 print(f"{'scan mV/s':>10} {'step ms':>8} {'n':>5} {'R ohm':>10} {'err %':>8} {'R2':>11}")
@@ -45,7 +45,7 @@ for scan in (200, 250, 286, 333, 400, 500, 625, 1000):
 hs.close()
 
 with open(os.path.join(DATA, "E6_step_period.csv"), "w") as fh:
-    fh.write("# HunStat2 CV | E6 minimum viable step period, Estep=5 mV, -200..+200 mV\n")
+    fh.write("# SteiStat CV | E6 minimum viable step period, Estep=5 mV, -200..+200 mV\n")
     fh.write(f"# fRcal_set_ohm={RCAL}\n")
     fh.write("scan_rate_mV_s,step_period_ms,n_points,R_ohm,r2\n")
     for scan, tp, n, R, r2 in rows:

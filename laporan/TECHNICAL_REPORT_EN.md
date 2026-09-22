@@ -8,7 +8,7 @@ Electrochemistry is a fundamental science bridging chemical reactions and electr
 
 Historically, potentiostats were bulky, expensive laboratory instruments. Recent demands for Point-of-Care (PoC) medical diagnostics, environmental field testing, and wearable sensors have driven research into **portable, low-cost, and handheld potentiostats**. 
 
-This report details the implementation, architecture, hardware design, and software refactoring of the **HunStat2**, a portable potentiostat based on the **Analog Devices AD5941** Analog Front End (AFE) and the **Seeed Studio XIAO RP2040** microcontroller.
+This report details the implementation, architecture, hardware design, and software refactoring of the **SteiStat**, a portable potentiostat based on the **Analog Devices AD5941** Analog Front End (AFE) and the **Seeed Studio XIAO RP2040** microcontroller.
 
 ---
 
@@ -27,7 +27,7 @@ Modern handheld designs draw inspiration from open-source potentiostat framework
 * **FreiStat**: A modular framework emphasizing clean separation between hardware-specific setups, communication protocols, and electrochemical methods.
 * **HELPStat**: A handheld, EIS-enabled potentiostat demonstrating that high-precision Impedance Spectroscopy can be achieved on a battery-powered micro-platform using the AD5940/AD5941 family.
 
-Our refactoring of the HunStat2 firmware adopts the **FreiStat modular paradigm**, transitioning from a monolithic code structure to a layered, maintainable software design.
+Our refactoring of the SteiStat firmware adopts the **FreiStat modular paradigm**, transitioning from a monolithic code structure to a layered, maintainable software design.
 
 ---
 
@@ -212,7 +212,7 @@ Throughout development, several integration issues were identified and resolved:
 ### 7.1. Empty Plot Rendering in the Python UI
 * **Symptom**: The Python GUI connected to the MCU serial port, but the live graph remained empty.
 * **Root Cause**: The UI parser expected strict tag prefixes (e.g. `CA,x,y`) to map coordinate points. The older firmware output raw un-tagged values or logs that caused parsing exceptions.
-* **Solution**: Standardized all technique print logs (e.g., `CA,%.4f,%.4e`, `SWV,%.2f,%.4e`) and updated the Tkinter UI parsing regular expressions in `hunstat2_test_ui.py`.
+* **Solution**: Standardized all technique print logs (e.g., `CA,%.4f,%.4e`, `SWV,%.2f,%.4e`) and updated the Tkinter UI parsing regular expressions in `steistat_test_ui.py`.
 
 ### 7.2. SPI Bus and Chip ID Invalidation
 * **Symptom**: The AFE failed to initialize; calling the read-chip-ID function returned `0x0000` or `0xFFFF`.
@@ -249,7 +249,7 @@ Throughout development, several integration issues were identified and resolved:
 
 ### 7.9. Python UI Silently Misread DPV Parameters as Volts Instead of Millivolts
 * **Symptom**: DPV sweeps launched from the Tkinter UI produced a tiny, flat, or nonsensical voltage range even when the on-screen fields showed reasonable millivolt values (e.g. `0` to `1400`).
-* **Root Cause**: `hunstat2_test_ui.py`'s DPV parameter builder called `_coerce_to_volt()` on every field unconditionally, assuming the UI's entry values were always in the same unit the rest of the app used internally. For a `0`–`1400` mV sweep this collapsed the whole range into roughly a 1.4 V span mis-scaled against the firmware's mV-based protocol (§4.2 of the architecture document).
+* **Root Cause**: `steistat_test_ui.py`'s DPV parameter builder called `_coerce_to_volt()` on every field unconditionally, assuming the UI's entry values were always in the same unit the rest of the app used internally. For a `0`–`1400` mV sweep this collapsed the whole range into roughly a 1.4 V span mis-scaled against the firmware's mV-based protocol (§4.2 of the architecture document).
 * **Solution**: The DPV builder now inspects the actual magnitude of the entered start/end values — if their difference exceeds `5.0`, it assumes the user typed millivolts directly (the common case) and skips the extra scale conversion; otherwise it treats the input as volts and converts. This is a heuristic, not a unit-aware input field, so it is worth revisiting if a future UI redesign adds explicit unit selectors instead.
 
 ---
@@ -269,7 +269,7 @@ Here is a summary of expected results for a Randles cell model (standard electri
 
 ## 9. Conclusion and Future Recommendations
 
-The modular refactoring of the HunStat2 firmware has successfully separated concerns, creating a maintainable, extensible code base. The implementation of the Python Test Console allows rapid testing via both simulated dummy profiles and real-time board measurements.
+The modular refactoring of the SteiStat firmware has successfully separated concerns, creating a maintainable, extensible code base. The implementation of the Python Test Console allows rapid testing via both simulated dummy profiles and real-time board measurements.
 
 ### Recommendations for Future Work:
 1. **Calibration Automation**: Implement automatic $R_{cal}$ sweeps before each EIS run to correct for ambient temperature drifts.
@@ -287,8 +287,8 @@ The modular refactoring of the HunStat2 firmware has successfully separated conc
 This session began with a new project location, `Software/update 2 (18 Juli 26)/AD5941_25/`, that failed to compile out of the box, and ended with two confirmed-and-fixed bugs in the Python test UI after a live dummy-cell verification run. Full narrative, root-cause derivations, and a before/after table are in the standalone `UPDATE_2026-08-01.md` in this same folder; this section summarizes the parts most relevant to the technical report's existing structure.
 
 ### 11.1. Compile-Time Fixes (New Sketch Location)
-* **`HunStat2.ino`'s relative includes were stale.** The file moved from one level below `src/` to sitting directly beside it, but its `#include "../src/..."` lines still carried the old `../` prefix, producing `fatal error: ../src/setup/ad5941_setup.h: No such file or directory`. Fixed by dropping the `../` prefix on all 8 local includes — see `UPDATE_2026-08-01.md` §1.1.
-* **`HunStat2.ino` and `AD5941_25.ino` cannot share a sketch folder.** They are two independent, complete firmware images with ~20 identically-named top-level functions, including `setup()`/`loop()` — not complementary files. `HunStat2.ino` was relocated to its own sibling sketch folder (`Software/update 2 (18 Juli 26)/HunStat2/`). See `UPDATE_2026-08-01.md` §1.2.
+* **`SteiStat.ino`'s relative includes were stale.** The file moved from one level below `src/` to sitting directly beside it, but its `#include "../src/..."` lines still carried the old `../` prefix, producing `fatal error: ../src/setup/ad5941_setup.h: No such file or directory`. Fixed by dropping the `../` prefix on all 8 local includes — see `UPDATE_2026-08-01.md` §1.1.
+* **`SteiStat.ino` and `AD5941_25.ino` cannot share a sketch folder.** They are two independent, complete firmware images with ~20 identically-named top-level functions, including `setup()`/`loop()` — not complementary files. `SteiStat.ino` was relocated to its own sibling sketch folder (`Software/update 2 (18 Juli 26)/SteiStat/`). See `UPDATE_2026-08-01.md` §1.2.
 
 ### 11.2. Dummy-Cell Verification Findings
 A live run against a 3-branch dummy test cell (diode-nonlinear branch, plain-resistor branch, RC branch — see `UPDATE_2026-08-01.md` §2 for the full schematic breakdown) produced flat/noisy CA and SWV traces with no discernible decay or peak. Two explanations were identified, neither of which is a firmware defect requiring a fix:
@@ -304,7 +304,7 @@ Every CV run produced exactly 2 data points regardless of configured parameters.
 The DPV plot displayed a steep diagonal line unrelated to the actual sweep data. Root cause: the plotting function connects points in arrival order rather than sorted by x-value, and the UI never cleared previous-run data before starting a new run — so re-running DPV without manually clicking "Clear" first joined the previous run's last point to the new run's first point with a stray line. **Fixed**: a new `_clear_mode_data()` call now runs automatically before every method execution. Full derivation in `UPDATE_2026-08-01.md` §3.2.
 
 ### 11.4. Verification
-`AD5941_25.ino` compiles and uploads successfully from the new folder location; `hunstat2_test_ui.py` passes `python -m py_compile` after both fixes. The corrected CV units have not yet been re-verified end-to-end against physical hardware — see `UPDATE_2026-08-01.md` §5.2 for that follow-up recommendation.
+`AD5941_25.ino` compiles and uploads successfully from the new folder location; `steistat_test_ui.py` passes `python -m py_compile` after both fixes. The corrected CV units have not yet been re-verified end-to-end against physical hardware — see `UPDATE_2026-08-01.md` §5.2 for that follow-up recommendation.
 
 ---
 
@@ -318,7 +318,7 @@ This session started from a practical problem — the XIAO RP2040 board's COM po
 | `src/electrochemical_methods/c_ca.cpp`, `c_swv.cpp`, `c_dpv.cpp` | `ConfigDCMeasurement()` never wrote `HpLoopCfg.HsTiaCfg`; `MeasureCurrentRaw()` used a 100-tick timeout with no `SINC2RDY`→`AFEINTC_1` routing | All three now configure the full HSTIA block and route the ready interrupt before every measurement; timeout raised to 1000 ticks | Current readings were silently wrong/zero regardless of actual cell current (§7.5, §7.6; explained in depth in the electrochemical methods document §2.1). |
 | `src/communication/communication.cpp` | No command set `DPV_Step_mV` | `case '!'` in `ProcessCommand1Float` maps `!<float>` → `DPV_Step_mV` | DPV step size was previously fixed at compile time (§7.7). |
 | `AD5941_25.ino` (`Calibrate_HSDAC`) | Wrote `HfOSC32MHzMode = bTRUE` into the shared `clk_cfg` used later by EIS's per-step clock logic | Uses a local `local_clk_cfg`; only re-asserts `clk_cfg.HFOSCEn` on the shared struct | A calibration pass could leave a stale clock-speed flag for the next EIS sweep (§7.8). |
-| `python_ui/hunstat2_test_ui.py` | DPV builder always ran entered values through `_coerce_to_volt()` | Skips the conversion when the start/end span exceeds `5.0` (heuristic: "this is already mV") | mV-range DPV sweeps (e.g. `0`–`1400`) were being mis-scaled into a sub-2V span (§7.9). |
+| `python_ui/steistat_test_ui.py` | DPV builder always ran entered values through `_coerce_to_volt()` | Skips the conversion when the start/end span exceeds `5.0` (heuristic: "this is already mV") | mV-range DPV sweeps (e.g. `0`–`1400`) were being mis-scaled into a sub-2V span (§7.9). |
 
 **New findings surfaced while documenting the above** (not part of the original uncommitted diff, found by reading the live vs. dead code paths while writing this report):
 * The firmware contains a complete second, unreachable implementation of the serial protocol and CA/SWV/DPV (`src/command_processing/` and the free-function half of `electrochemical_methods.cpp`) that still has the pre-fix bugs — see §5's directory note and the architecture document §3.4/§8.

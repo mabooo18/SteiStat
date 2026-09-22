@@ -1,7 +1,7 @@
-from hunstat import HunStat
+from steistat import SteiStat
 import statistics
 
-hs = HunStat("COM8")
+hs = SteiStat("COM8")
 print("OCP (mV):", hs.ocp())
 
 for v in (0.0, 50.0, 100.0, 200.0, -100.0):

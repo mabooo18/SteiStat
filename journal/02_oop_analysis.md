@@ -1,4 +1,4 @@
-# OOP Analysis — HunStat2 / AD5941_25 Firmware
+# OOP Analysis — SteiStat / AD5941_25 Firmware
 
 **Method:** every `.h`/`.cpp` file under `AD5941_25/src/` was read in full. A repo-wide search for `virtual`, `: public` (inheritance), `override`, and `template<` returned **zero matches** in project code (only present, if at all, inside the vendor AD5940 driver — which itself has none either). This single fact governs the whole assessment below: whatever encapsulation exists, there is no inheritance, no polymorphism, and no interface abstraction anywhere in the codebase.
 

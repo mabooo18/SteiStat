@@ -5,7 +5,7 @@ attempted; the step-period limit itself is characterised separately.
 """
 import os, time
 import numpy as np
-from hunstat import HunStat
+from steistat import SteiStat
 
 DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 R_S, R_CT, C_DL = 560.0, 10000.0, 33e-9
@@ -37,7 +37,7 @@ def run_cv(hs, tag, v0, v1, estep, scan, cycles=1, rcal=RCAL, write=True):
         r2 = 1 - ((i - (m * v + b)).var() / i.var())
     if write and len(pts) >= 10:
         with open(os.path.join(DATA, f"{tag}.csv"), "w", newline="") as fh:
-            fh.write(f"# HunStat2 CV | {tag}\n")
+            fh.write(f"# SteiStat CV | {tag}\n")
             fh.write(f"# v_start_mV={v0} v_stop_mV={v1} estep_mV={estep} "
                      f"scan_rate_mV_s={scan} cycles={cycles}\n")
             fh.write(f"# fRcal_set_ohm={rcal} rtia_calibrated_ohm={rtia}\n")
@@ -51,7 +51,7 @@ def run_cv(hs, tag, v0, v1, estep, scan, cycles=1, rcal=RCAL, write=True):
     return len(pts)
 
 
-hs = HunStat("COM8", boot_delay=5.0)
+hs = SteiStat("COM8", boot_delay=5.0)
 hs.send("@ 0"); hs.drain(0.5)
 
 print("verify baseline reproduces:")

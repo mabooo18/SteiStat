@@ -1,4 +1,4 @@
-# HunStat2 CV | E3_scan400
+# SteiStat CV | E3_scan400
 # v_start_mV=-200 v_stop_mV=200 estep_mV=10 scan_rate_mV_s=400 cycles=1
 # fRcal_set_ohm=200.0 rtia_calibrated_ohm=1093.052
 # cell=we-C Randles Rs=560.0 Rct=10000.0 Cdl=3.3e-08

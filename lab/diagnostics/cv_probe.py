@@ -1,7 +1,7 @@
 import numpy as np
-from hunstat import HunStat
+from steistat import SteiStat
 
-hs = HunStat("COM8")
+hs = SteiStat("COM8")
 hs.send("@ 0"); hs.drain(0.3)
 pts = hs.cv(-200, 200, 5, 200, cycles=1)
 hs.close()

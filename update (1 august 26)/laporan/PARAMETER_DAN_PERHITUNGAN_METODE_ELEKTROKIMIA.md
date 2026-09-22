@@ -1,12 +1,12 @@
 # Panduan Parameter, Perhitungan, dan Teori Elektrokimia (CA, SWV, DPV)
 
-Dokumen ini menjelaskan secara sistematis tentang **parameter yang digunakan**, **rumus perhitungan matematika dalam kode C++**, dan **kesesuaian dengan teori elektrokimia** untuk tiga metode utama: **Chronoamperometry (CA)**, **Square Wave Voltammetry (SWV)**, dan **Differential Pulse Voltammetry (DPV)** pada firmware HunStat2 (Analog Devices AD5941).
+Dokumen ini menjelaskan secara sistematis tentang **parameter yang digunakan**, **rumus perhitungan matematika dalam kode C++**, dan **kesesuaian dengan teori elektrokimia** untuk tiga metode utama: **Chronoamperometry (CA)**, **Square Wave Voltammetry (SWV)**, dan **Differential Pulse Voltammetry (DPV)** pada firmware SteiStat (Analog Devices AD5941).
 
 ---
 
 ## 1. Konversi Dasar Hardware: ADC ke Arus ($I$)
 
-Semua metode elektrokimia pada HunStat2 membaca arus sel ($I_{\text{cell}}$) melalui penguat transimpedansi (**HSTIA**) dan **16-bit Sigma-Delta ADC**. 
+Semua metode elektrokimia pada SteiStat membaca arus sel ($I_{\text{cell}}$) melalui penguat transimpedansi (**HSTIA**) dan **16-bit Sigma-Delta ADC**. 
 
 ### Rumus Inti Konversi Kode C++ (`RawToCurrent`)
 

@@ -1,7 +1,7 @@
 import numpy as np
-from hunstat import HunStat
+from steistat import SteiStat
 
-hs = HunStat("COM8")
+hs = SteiStat("COM8")
 hs.send("@ 0"); hs.drain(0.3)
 print(f"{'fRcal':>8} {'slope uA/mV':>13} {'implied R':>12} {'R2':>10}")
 for rc in (10000, 4700, 1000, 200):

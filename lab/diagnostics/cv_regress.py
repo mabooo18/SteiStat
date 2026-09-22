@@ -1,6 +1,6 @@
 import numpy as np
-from hunstat import HunStat
-hs = HunStat("COM8", boot_delay=4.0)
+from steistat import SteiStat
+hs = SteiStat("COM8", boot_delay=4.0)
 hs.send("@ 0"); hs.drain(0.3)
 hs.ser.reset_input_buffer()
 hs.send("D -200,200,5,200,1"); hs.drain(0.4); hs.send("M", settle=0)

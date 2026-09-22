@@ -1,6 +1,6 @@
 /******************************************************************************
  * @file:    communication.h
- * @brief:   Serial communication dan command parser untuk HunStat2
+ * @brief:   Serial communication dan command parser untuk SteiStat
  *
  * Membungkus semua fungsi ProcessCommand*, ProcessToken,
  * SplitAndProcessCommands, ShowParameter*, dan AddCommandToHistory

@@ -1,4 +1,4 @@
-# Project Audit — HunStat2 / AD5941_25 Potentiostat
+# Project Audit — SteiStat / AD5941_25 Potentiostat
 
 **Scope of this audit:** `Software/update 4 (8 Agustus 26)/AD5941_25/` (the most recent firmware revision) plus repo-root documentation (`README.md`, `Hardware/`, `laporan/`). Older `update 2`/`update 3` folders exist but are not separately audited — they appear to be prior snapshots of the same codebase.
 
@@ -39,7 +39,7 @@ This formula, the TIA table, and the PGA table are the inputs needed for the the
 ## 4. Communication Interface
 
 - USB-Serial, ASCII single-letter command protocol, default **1,000,000 baud** (`laporan/ARCHITECTURE_DOCUMENT.md`, confirmed in `g_Comm.Begin(1000000, &g_Data)` in `AD5941_25.ino`).
-- Two independent, non-interoperating host GUIs both speak this protocol: `AD5941_25/hunstat_gui.py` (production) and `AD5941_25/python_ui/hunstat2_test_ui.py` (diagnostic console).
+- Two independent, non-interoperating host GUIs both speak this protocol: `AD5941_25/steistat_gui.py` (production) and `AD5941_25/python_ui/steistat_test_ui.py` (diagnostic console).
 
 ## 5. Firmware — Project Structure
 
@@ -49,8 +49,8 @@ AD5941_25/
 ├── XIAOPort.cpp                   # RP2040 pin mapping + bit-banged SPI to AD5941 (live)
 ├── cv.cpp / rampTest.cpp / RampTest.h   # legacy CV engine (live, NOT migrated into src/)
 ├── utilities.h/.cpp               # LED colors, Log()/Info() diagnostics, marker pulses (live)
-├── hunstat_data_storage.h, hunstat_status_utils.h, status_utils.h, ad5940.h, debug.h  # thin wrapper headers (one, status_utils.h, appears unreferenced/dead)
-├── hunstat_gui.py, mock_serial.py, fix_structs.py   # production GUI + serial mock + one stale one-off script
+├── steistat_data_storage.h, steistat_status_utils.h, status_utils.h, ad5940.h, debug.h  # thin wrapper headers (one, status_utils.h, appears unreferenced/dead)
+├── steistat_gui.py, mock_serial.py, fix_structs.py   # production GUI + serial mock + one stale one-off script
 ├── python_ui/                     # second, independent diagnostic GUI + test/parsing scripts
 ├── ad5941_register_test/          # separate standalone sketch for SPI/chip-ID smoke testing
 ├── hasil/                         # existing result plots: CA.png, CV.png, DPV.png, SWV.png, "dummy cell.png"
@@ -72,10 +72,10 @@ Notably: **CV (Cyclic Voltammetry) has no class in `src/electrochemical_methods/
 
 | File | Framework | Role |
 |---|---|---|
-| `hunstat_gui.py` | tkinter/ttk + matplotlib (`FigureCanvasTkAgg`) | Production GUI: OCP/CV/EIS/CA tabs, serial control, live plotting, CSV export, class `HunStatGUI` |
+| `steistat_gui.py` | tkinter/ttk + matplotlib (`FigureCanvasTkAgg`) | Production GUI: OCP/CV/EIS/CA tabs, serial control, live plotting, CSV export, class `SteiStatGUI` |
 | `python_ui/mock_serial.py` | — | `MockSerial`: synthesizes fake CA/CV/EIS/OCP data so the GUI runs without hardware |
-| `python_ui/hunstat2_test_ui.py` | tkinter (raw `Canvas`, no matplotlib) | Diagnostic console: `SerialReader` (threaded), `TestUI`, own built-in dummy-data generator (duplicate of `mock_serial.py`) |
-| `python_ui/test_parser_offline.py` | — | `SerialDataParser` + `unittest` cases — a **third, independent copy** of the line-parsing logic already in `hunstat_gui.py` and `hunstat2_test_ui.py` |
+| `python_ui/steistat_test_ui.py` | tkinter (raw `Canvas`, no matplotlib) | Diagnostic console: `SerialReader` (threaded), `TestUI`, own built-in dummy-data generator (duplicate of `mock_serial.py`) |
+| `python_ui/test_parser_offline.py` | — | `SerialDataParser` + `unittest` cases — a **third, independent copy** of the line-parsing logic already in `steistat_gui.py` and `steistat_test_ui.py` |
 | `python_ui/test_dummy_simulation.py`, `test_hardware_ca_swv_dpv.py`, `ad5941_detect_test.py` | — | Ad hoc test/diagnostic scripts, procedural |
 
 Dependencies declared: only `pyserial>=3.5` in `requirements.txt`; `matplotlib`/`numpy` are imported but **undeclared**. `[CODE VERIFICATION REQUIRED]`: pin exact versions used for reproducibility before publication.
@@ -88,7 +88,7 @@ Dependencies declared: only `pyserial>=3.5` in `requirements.txt`; `matplotlib`/
 ## 8. Main Entry Points
 
 - Firmware: `AD5941_25/AD5941_25.ino` (`setup()` / `loop()`).
-- GUI: `AD5941_25/hunstat_gui.py` (`if __name__ == "__main__"`) and, separately, `AD5941_25/python_ui/hunstat2_test_ui.py`.
+- GUI: `AD5941_25/steistat_gui.py` (`if __name__ == "__main__"`) and, separately, `AD5941_25/python_ui/steistat_test_ui.py`.
 
 ## 9. Configuration Files
 
@@ -100,7 +100,7 @@ Dependencies declared: only `pyserial>=3.5` in `requirements.txt`; `matplotlib`/
 - Arduino IDE, manual library installation. `Software/Arduino_Libraries/` ships zipped copies of: `Adafruit_NeoPixel`, the AD5940 vendor driver library, and `arduino-printf` (`LibPrintf.h`, used by `cv.cpp`).
 - `Software/Arduino_Libraries/README.txt` exists but is **empty** — no documented install steps despite `Software/README.md` referencing it.
 - No documented board-manager URL, port/baud selection instructions, or upload command were found anywhere in the repository. `[DATA REQUIRED]` before writing §2.6/Phase 12 deployment documentation — the actual flashing procedure must be captured from whoever built the hardware, not assumed.
-- Windows GUI installer `HunStat2-v700.exe` is referenced in `Software/README.md` as a packaged distributable, but the packaging process (PyInstaller? cx_Freeze?) is not documented in-repo. `[DATA REQUIRED]`.
+- Windows GUI installer `SteiStat-v700.exe` is referenced in `Software/README.md` as a packaged distributable, but the packaging process (PyInstaller? cx_Freeze?) is not documented in-repo. `[DATA REQUIRED]`.
 
 ## 11. Calibration System
 
@@ -125,7 +125,7 @@ This status directly bounds what Phase 8/9 of the paper can honestly claim: CA/S
 ## 13. Data Processing / Storage
 
 - In-firmware: `C_DataStorage` centralizes ~50 public parameter fields (see `02_oop_analysis.md` for critique); a separate `measurement_buffer.cpp` and a `Measurements[]` array inside `C_DataStorage` are two **divergent** copies of the same buffering concept.
-- No on-device file storage (no SD card / flash logging found) — data is streamed over serial and saved host-side (CSV, per `hunstat_gui.py`).
+- No on-device file storage (no SD card / flash logging found) — data is streamed over serial and saved host-side (CSV, per `steistat_gui.py`).
 - No structured data format (e.g., JSON/HDF5) — CSV only, and export logic is duplicated across the two GUIs.
 
 ## 14. Existing Experimental Data / Plots
@@ -162,7 +162,7 @@ Three dated snapshots exist under `Software/`: `update 2 (18 Juli 26)`, `update 
 ## 18. Authorship / Licensing
 
 - `AD5941_25.ino` (top of file): MIT-style permissive license, author "Kent".
-- `HunStat2/HunStat2.ino`: MIT License, author Richard Morrison (Instruments4Chem, Melbourne, Australia) — this is the original/reference EIS sketch this project was adapted from.
+- `SteiStat/SteiStat.ino`: MIT License, author Richard Morrison (Instruments4Chem, Melbourne, Australia) — this is the original/reference EIS sketch this project was adapted from.
 - No repository-wide LICENSE file was located. `[DATA REQUIRED]` — needed for any open-source/reproducibility claim in Phase 5.
 
 ---

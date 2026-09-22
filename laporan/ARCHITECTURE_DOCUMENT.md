@@ -1,12 +1,12 @@
-# Architecture Document: HunStat2 (AD5941_25 Firmware)
+# Architecture Document: SteiStat (AD5941_25 Firmware)
 
-This document provides a comprehensive overview of the design, module structure, control flow, command-parsing protocol, and hardware details of the HunStat2 firmware (`AD5941_25`).
+This document provides a comprehensive overview of the design, module structure, control flow, command-parsing protocol, and hardware details of the SteiStat firmware (`AD5941_25`).
 
 ---
 
 ## 1. System Overview
 
-**HunStat2** is a modular firmware written in C/C++ (Arduino framework) designed to run on a microcontroller (e.g., Seeed Studio XIAO RP2040) interfaced with the **Analog Devices AD5940/AD5941** electrochemical analog front-end (AFE) chip. 
+**SteiStat** is a modular firmware written in C/C++ (Arduino framework) designed to run on a microcontroller (e.g., Seeed Studio XIAO RP2040) interfaced with the **Analog Devices AD5940/AD5941** electrochemical analog front-end (AFE) chip. 
 
 The firmware allows performing several electrochemical techniques and streaming the measurement results back to a host computer (like a Python UI or LabVIEW test interface) over a high-speed Serial port (default baudrate: 1,000,000).
 
@@ -29,7 +29,7 @@ The firmware allows performing several electrochemical techniques and streaming 
 
 ## 2. Directory and File Structure
 
-> **Note on physical location (2026-08-01):** the tree below now lives at `Software/update 2 (18 Juli 26)/AD5941_25/`, a separate reorganized copy of the project alongside the original `Software/AD5941_25/` path this document was originally written against. A second, older monolithic sketch, `HunStat2.ino` — sharing ~20 top-level function names (including `setup()`/`loop()`) with `AD5941_25.ino` — was briefly relocated into this same folder during that reorganization, which breaks compilation outright (Arduino compiles every `.ino` in a sketch folder as one program). It has since been moved to its own sibling sketch folder, `Software/update 2 (18 Juli 26)/HunStat2/`. See `UPDATE_2026-08-01.md` §1 for the full fix, including a stale relative-include bug (`../src/...`) that also had to be corrected before the folder-conflict issue was even visible.
+> **Note on physical location (2026-08-01):** the tree below now lives at `Software/update 2 (18 Juli 26)/AD5941_25/`, a separate reorganized copy of the project alongside the original `Software/AD5941_25/` path this document was originally written against. A second, older monolithic sketch, `SteiStat.ino` — sharing ~20 top-level function names (including `setup()`/`loop()`) with `AD5941_25.ino` — was briefly relocated into this same folder during that reorganization, which breaks compilation outright (Arduino compiles every `.ino` in a sketch folder as one program). It has since been moved to its own sibling sketch folder, `Software/update 2 (18 Juli 26)/SteiStat/`. See `UPDATE_2026-08-01.md` §1 for the full fix, including a stale relative-include bug (`../src/...`) that also had to be corrected before the folder-conflict issue was even visible.
 
 The project has been refactored from a monolithic codebase into a modular, object-oriented design:
 
@@ -273,8 +273,8 @@ A hands-on hardware debugging session (COM port recovery + a live CA run against
 
 A follow-up session covering a sketch-folder reorganization, a live dummy-cell verification run, and two Python-UI bugs it surfaced. Full derivations in `UPDATE_2026-08-01.md`; summarized here against this document's existing sections:
 
-1. **`HunStat2.ino` failed to compile after the project moved to a new folder — fixed.** Its `#include "../src/..."` paths assumed a folder depth that no longer matched its new position beside `src/`. See §2's note above and `UPDATE_2026-08-01.md` §1.1.
-2. **`HunStat2.ino` and `AD5941_25.ino` cannot share a sketch folder — fixed.** Confirmed ~20 duplicate top-level function names between the two, including `setup()`/`loop()`; `HunStat2.ino` moved to its own sibling folder. See §2's note above and `UPDATE_2026-08-01.md` §1.2. **Follow-up, not fixed**: `HunStat2.ino` in its new location no longer has access to the shared `src/`/root files it depends on and will not compile standalone as-is.
-3. **CV always produced exactly 2 data points — fixed.** Root cause was a unit mismatch: the Python UI's CV panel sent Start/Stop/Step/Scan in volts while `rampTest.cpp`'s `AppRAMPSeqInitGen()` (§3.5) step-count formula is entirely millivolt-based. Confirmed present on the live `communication.cpp` path (§3.3), not just the dead `command_processing.cpp` copy (§3.4) — both share the identical `D %f,%f,%f,%f,%i` pattern and the same `cvSetup()` in `cv.cpp`, so the bug was purely on the UI's transmission side, not in either parser. Fixed in `hunstat2_test_ui.py`'s CV parameter builder (×1000 conversion + explicit unit labels). See `UPDATE_2026-08-01.md` §3.1.
+1. **`SteiStat.ino` failed to compile after the project moved to a new folder — fixed.** Its `#include "../src/..."` paths assumed a folder depth that no longer matched its new position beside `src/`. See §2's note above and `UPDATE_2026-08-01.md` §1.1.
+2. **`SteiStat.ino` and `AD5941_25.ino` cannot share a sketch folder — fixed.** Confirmed ~20 duplicate top-level function names between the two, including `setup()`/`loop()`; `SteiStat.ino` moved to its own sibling folder. See §2's note above and `UPDATE_2026-08-01.md` §1.2. **Follow-up, not fixed**: `SteiStat.ino` in its new location no longer has access to the shared `src/`/root files it depends on and will not compile standalone as-is.
+3. **CV always produced exactly 2 data points — fixed.** Root cause was a unit mismatch: the Python UI's CV panel sent Start/Stop/Step/Scan in volts while `rampTest.cpp`'s `AppRAMPSeqInitGen()` (§3.5) step-count formula is entirely millivolt-based. Confirmed present on the live `communication.cpp` path (§3.3), not just the dead `command_processing.cpp` copy (§3.4) — both share the identical `D %f,%f,%f,%f,%i` pattern and the same `cvSetup()` in `cv.cpp`, so the bug was purely on the UI's transmission side, not in either parser. Fixed in `steistat_test_ui.py`'s CV parameter builder (×1000 conversion + explicit unit labels). See `UPDATE_2026-08-01.md` §3.1.
 4. **DPV plot showed a spurious diagonal line — fixed.** The Python UI's plot renderer joins points in arrival order, and previous-run data was never cleared before a new run started, so re-running DPV without clicking "Clear" first drew a stray line between runs. Fixed by auto-clearing the selected method's data before each run. See `UPDATE_2026-08-01.md` §3.2.
 5. **No working-electrode channel selection exists in firmware — still open.** `C_CA`/`C_SWV`/`C_DPV`'s `ConfigDCMeasurement()` (§3.4) all hardcode `SWN_SE0`; there is no serial command or config path to select a different physical WE pin. This is the leading hypothesis for flat/noisy CA and SWV results seen against a multi-branch dummy test cell this session — see `UPDATE_2026-08-01.md` §2 and §5, item 1.

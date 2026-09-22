@@ -107,7 +107,7 @@ Dua hal berikut tidak terlihat dari diagram di atas karena diagram hanya menggam
 
 1. **Jalur mati yang ikut ter-compile tapi tidak pernah dipanggil.** Selain `Comm` (`src/communication/communication.cpp`, jalur yang benar-benar dijalankan oleh `AD5941_25.ino`), ada satu set implementasi lama yang duplikat: `src/command_processing/command_processing.cpp` (parser serial versi prosedural) dan bagian atas `src/electrochemical_methods/electrochemical_methods.cpp` (fungsi bebas `RunCA`/`RunSWV`/`RunDPV`). Arduino tetap meng-compile kedua file ini karena berada di dalam folder sketch, tapi tidak ada satu pun pemanggil di `loop()` yang mengarah ke sana — jadi keduanya tidak pernah tereksekusi. Selengkapnya di `ARCHITECTURE_DOCUMENT.md` §3.4/§8 dan `TECHNICAL_REPORT_EN.md` §5.
 2. **Transport SPI ke AD5941 sekarang bit-banged, bukan `SPI` hardware bawaan RP2040.** Node `XIAOPort.cpp` di diagram di atas kini mengimplementasikan SPI Mode 0 secara manual lewat `digitalWrite`/`digitalRead` pada pin `D8`/`D9`/`D10`, karena wiring board ini menukar posisi MISO/MOSI dibanding pin-mux SPI0 bawaan XIAO RP2040. Detail lengkap di `TECHNICAL_REPORT_EN.md` §4.1 dan §7.4.
-3. **Update 2026-08-01**: folder proyek berpindah ke `Software/update 2 (18 Juli 26)/AD5941_25/`, sempat gagal compile karena path `#include` yang usang di `HunStat2.ino` dan dua sketch (`HunStat2.ino`/`AD5941_25.ino`) yang saling bentrok dalam satu folder sketch — keduanya sudah diperbaiki. Uji coba dengan dummy cell 3-cabang juga menemukan dua bug di `python_ui/hunstat2_test_ui.py`: parameter CV terkirim dalam satuan volt padahal firmware mengharapkan milivolt (sehingga sweep CV selalu berhenti di 2 titik data), dan plot DPV menggambar garis diagonal palsu karena data run sebelumnya tidak dibersihkan sebelum run baru. Detail lengkap ada di `UPDATE_2026-08-01.md`, ringkasan di `ARCHITECTURE_DOCUMENT.md` §9 dan `TECHNICAL_REPORT_EN.md` §11.
+3. **Update 2026-08-01**: folder proyek berpindah ke `Software/update 2 (18 Juli 26)/AD5941_25/`, sempat gagal compile karena path `#include` yang usang di `SteiStat.ino` dan dua sketch (`SteiStat.ino`/`AD5941_25.ino`) yang saling bentrok dalam satu folder sketch — keduanya sudah diperbaiki. Uji coba dengan dummy cell 3-cabang juga menemukan dua bug di `python_ui/steistat_test_ui.py`: parameter CV terkirim dalam satuan volt padahal firmware mengharapkan milivolt (sehingga sweep CV selalu berhenti di 2 titik data), dan plot DPV menggambar garis diagonal palsu karena data run sebelumnya tidak dibersihkan sebelum run baru. Detail lengkap ada di `UPDATE_2026-08-01.md`, ringkasan di `ARCHITECTURE_DOCUMENT.md` §9 dan `TECHNICAL_REPORT_EN.md` §11.
 
 ---
 
@@ -119,7 +119,7 @@ The diagrams above describe the *software* call graph — which function calls w
 
 ```mermaid
 graph TD
-    subgraph PC[PC Software - HunStat2 Windows GUI]
+    subgraph PC[PC Software - SteiStat Windows GUI]
         CVtab[CV tab]
         OCPtab[OCP tab]
         EIStab[EIS tab]

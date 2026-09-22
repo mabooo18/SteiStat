@@ -1,7 +1,7 @@
 import numpy as np, time, serial
-from hunstat import HunStat
+from steistat import SteiStat
 
-hs = HunStat("COM8", boot_delay=4.0, verbose=False)
+hs = SteiStat("COM8", boot_delay=4.0, verbose=False)
 print("params rcal:", [l for l in hs.params() if "cal" in l.lower()])
 
 hs.send("@ 0"); hs.drain(0.3)

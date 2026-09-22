@@ -1,6 +1,6 @@
 # How Electrochemical Methods Work in Code (AD5941)
 
-This document explains what an electrochemical method is, how it functions physically, and how the underlying physics are translated into C++ code in the HunStat2 firmware.
+This document explains what an electrochemical method is, how it functions physically, and how the underlying physics are translated into C++ code in the SteiStat firmware.
 
 > **Looking for the picture, not the prose?** `FLOWCHART.md` Part 2 has the same explanation as a set of signal-level flowcharts — system block diagram, excitation path, potentiostat feedback loop, a Generate/React/Detect three-stage view, the response path back to the PC, and a practical RCAL/gain selection table. The feedback-loop diagram is reproduced below since it's the one piece of physical intuition the rest of this document assumes.
 
@@ -156,7 +156,7 @@ If `HpLoopCfg.HsTiaCfg` is left unconfigured (all fields zero, the struct's defa
 ### Step-by-Step Code Flow:
 *Because CV sweeps are fast and require precise timing, doing this in microcontroller loops causes jitter. Instead, the firmware compiles commands directly into the AD5941's internal **Hardware Sequencer SRAM**.*
 
-1. **Setup Parameters**: The variables `V_Start`, `V_Stop`, `EStep` (step size), and `ScanRate` (speed) are configured. **These are all millivolt-scale** (`RampTest.h`'s `DAC12BITVOLT_1LSB = 2200/4095 ≈ 0.537 mV` — every field in `AppRAMPCfg_Type` is mV-based, matching CA/SWV/DPV's convention elsewhere in this document). A 2026-08-01 bug in the Python UI sent these four fields in volts instead — e.g. `0.5` instead of `500` — which collapsed a normal ~700-point sweep down to exactly 2 points, since the step-count formula below effectively saw a sub-1mV total voltage swing. Fixed on the UI side (`hunstat2_test_ui.py` now converts V→mV before sending); see `UPDATE_2026-08-01.md` §3.1 for the full derivation.
+1. **Setup Parameters**: The variables `V_Start`, `V_Stop`, `EStep` (step size), and `ScanRate` (speed) are configured. **These are all millivolt-scale** (`RampTest.h`'s `DAC12BITVOLT_1LSB = 2200/4095 ≈ 0.537 mV` — every field in `AppRAMPCfg_Type` is mV-based, matching CA/SWV/DPV's convention elsewhere in this document). A 2026-08-01 bug in the Python UI sent these four fields in volts instead — e.g. `0.5` instead of `500` — which collapsed a normal ~700-point sweep down to exactly 2 points, since the step-count formula below effectively saw a sub-1mV total voltage swing. Fixed on the UI side (`steistat_test_ui.py` now converts V→mV before sending); see `UPDATE_2026-08-01.md` §3.1 for the full derivation.
 2. **Sequencer Compilation (`AppRAMPInit`)**:
    * The code calculates the list of voltage steps from start to peak and back.
    * It compiles sequencer command blocks:

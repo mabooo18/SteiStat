@@ -1,5 +1,5 @@
-#ifndef HUNSTAT_ADC_CONTROL_H
-#define HUNSTAT_ADC_CONTROL_H
+#ifndef STEISTAT_ADC_CONTROL_H
+#define STEISTAT_ADC_CONTROL_H
 
 #include <Arduino.h>
 #include "../../AD5940.h"

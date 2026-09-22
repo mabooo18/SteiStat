@@ -11,7 +11,7 @@ import math
 import sys
 import unittest
 
-from hunstat2_test_ui import TestUI
+from steistat_test_ui import TestUI
 
 
 class DummySimulationTests(unittest.TestCase):

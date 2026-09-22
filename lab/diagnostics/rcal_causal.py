@@ -1,8 +1,8 @@
 import numpy as np
-from hunstat import HunStat
+from steistat import SteiStat
 
 R_NOM = 10560.0   # Randles we-C: Rs 560 + Rct 10k
-hs = HunStat("COM8", boot_delay=4.0)
+hs = SteiStat("COM8", boot_delay=4.0)
 hs.send("@ 0"); hs.drain(0.3)
 
 print(f"{'fRcal set':>10} {'RTIA cal':>10} {'slope':>10} {'implied R':>11} {'err vs 10560':>13} {'R2':>10}")

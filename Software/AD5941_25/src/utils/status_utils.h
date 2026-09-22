@@ -1,5 +1,5 @@
-#ifndef HUNSTAT_STATUS_UTILS_H
-#define HUNSTAT_STATUS_UTILS_H
+#ifndef STEISTAT_STATUS_UTILS_H
+#define STEISTAT_STATUS_UTILS_H
 
 #include <Arduino.h>
 

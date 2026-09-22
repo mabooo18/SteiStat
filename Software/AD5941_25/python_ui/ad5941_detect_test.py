@@ -26,7 +26,7 @@ READBACK_RE = re.compile(r"I\s+0x([0-9A-Fa-f]+)=0x([0-9A-Fa-f]+)")
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Test koneksi AD5941 lewat firmware HunStat2 dengan membaca register SPI.",
+        description="Test koneksi AD5941 lewat firmware SteiStat dengan membaca register SPI.",
     )
     parser.add_argument("port", nargs="?", help="Port serial, misalnya COM8")
     parser.add_argument("--baud", type=int, default=1_000_000, help="Baud rate firmware (default: 1000000)")

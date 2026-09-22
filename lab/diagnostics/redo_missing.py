@@ -1,7 +1,7 @@
 """Re-acquire the sweeps lost when the board wedged, and log any recurrence."""
 import os, time
 import numpy as np
-from hunstat import HunStat
+from steistat import SteiStat
 
 DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 R_S, R_CT, C_DL = 560.0, 10000.0, 33e-9
@@ -25,7 +25,7 @@ def run_cv(hs, tag, v0, v1, estep, scan, cycles=1, rcal=RCAL):
                 try: pts.append((float(p[1]), float(p[2])))
                 except ValueError: pass
     with open(os.path.join(DATA, f"{tag}.csv"), "w", newline="") as fh:
-        fh.write(f"# HunStat2 CV | {tag}\n")
+        fh.write(f"# SteiStat CV | {tag}\n")
         fh.write(f"# v_start_mV={v0} v_stop_mV={v1} estep_mV={estep} "
                  f"scan_rate_mV_s={scan} cycles={cycles}\n")
         fh.write(f"# fRcal_set_ohm={rcal} rtia_calibrated_ohm={rtia}\n")
@@ -49,7 +49,7 @@ jobs = ([("E3_scan400", -200, 200, 5, 400), ("E3_scan800", -200, 200, 5, 800)]
            for w in (50, 100, 200, 400, 600)]
         + [("E5_estep2", -200, 200, 2, 200)])
 
-hs = HunStat("COM8", boot_delay=4.0)
+hs = SteiStat("COM8", boot_delay=4.0)
 hs.send("@ 0"); hs.drain(0.3)
 t0 = time.time()
 for tag, v0, v1, st, sr in jobs:

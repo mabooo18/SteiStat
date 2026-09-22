@@ -5,7 +5,7 @@ import re
 
 class SerialDataParser:
     """
-    Extracted parsing logic from hunstat2_test_ui.py to verify compatibility
+    Extracted parsing logic from steistat_test_ui.py to verify compatibility
     with new refactored firmware output streams.
     """
     def parse_measurement(self, line):
