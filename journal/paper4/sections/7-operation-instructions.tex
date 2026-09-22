@@ -72,9 +72,10 @@ Command & Meaning \\
 \texttt{! <mV>} & DPV staircase step size (note: also the history
   command with no argument, Table~\ref{tab:runcmds}) \\
 \texttt{\# <mV>} & DPV pulse amplitude \\
-\texttt{D <Vstart>,<Vstop>,<Estep>,<ScanRate>,<CycleNumber>} & Configure
-  CV: potentials and step in mV, scan rate in mV/s, cycle count (integer,
-  no spaces around commas) \\
+\texttt{D <Vstart>,\allowbreak<Vstop>,\allowbreak<Estep>,\allowbreak
+  <ScanRate>,\allowbreak<CycleNumber>} & Configure CV: potentials and
+  step in mV, scan rate in mV/s, cycle count (integer, no spaces around
+  commas) \\
 \texttt{r <0--7>} & Select LPTIA feedback resistor (Table~\ref{tab:rtia}) \\
 \texttt{c <ohms>} & Declare the fitted calibration resistor $\Rcal$
   (correct value: \SI{200}{\ohm}, Section~\ref{sec:components}) \\
@@ -96,10 +97,12 @@ step and read the first sample.
 1 0        # baseline: 0 mV
 A          # run CA, discard (settling)
 1 100      # target step: +100 mV
-A          # run CA -- first "CA,0.0000,..." line is the step-onset sample
+A          # run CA -- first "CA,0.0000,.." line is the step-onset sample
 \end{verbatim}
 Each CA run streams \texttt{CA\_START}, then one line per sample
-(\texttt{CA,<t\_s>,<I\_A>,0x<raw\_hex>,<timeout\_flag>}), then
-\texttt{CA\_END}. CV streams \texttt{CV,<V\_mV>,<I>,}; SWV/DPV stream
-\texttt{SWV,<V\_mV>,<dI\_A>} / \texttt{DPV,<V\_mV>,<dI\_A>}, each bracketed
-by their own \texttt{\_START}/\texttt{\_END} markers.
+(\texttt{CA,\allowbreak<t\_s>,\allowbreak<I\_A>,\allowbreak
+0x<raw\_hex>,\allowbreak<timeout\_flag>}), then \texttt{CA\_END}. CV
+streams \texttt{CV,<V\_mV>,<I>,}; SWV/DPV stream
+\texttt{SWV,<V\_mV>,<dI\_A>} / \texttt{DPV,<V\_mV>,<dI\_A>}, each
+bracketed by their own \texttt{\_START}/\allowbreak\texttt{\_END}
+markers.

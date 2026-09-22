@@ -3,17 +3,18 @@
 
 \subsection{Instrument and firmware baseline}
 The instrument under test is Steistat (Section~\ref{sec:hw-description}).
-All eleven defects diagnosed below were found and fixed in this project's
+All defects diagnosed below were found and fixed in this project's
 own firmware -- \texttt{AD5941\_25.ino} and
-\texttt{src/electrochemical\_methods/\{c\_ca,c\_swv,c\_dpv,dc\_potentiostat\_method\}.cpp},
-\texttt{src/communication/communication.cpp}, \texttt{cv.cpp}, and
+\texttt{src/electrochemical\_methods/\allowbreak\{c\_ca,\allowbreak
+c\_swv,\allowbreak c\_dpv,\allowbreak dc\_potentiostat\_method\}.cpp},
+\texttt{src/communication/\allowbreak communication.cpp}, \texttt{cv.cpp}, and
 \texttt{utilities.cpp} -- compiled with the \texttt{rp2040:rp2040} Arduino
 core via \texttt{arduino-cli} and flashed to a physical XIAO RP2040 board.
 The performance data reported in Section~\ref{sec:perfresults} was
 collected by this paper, on this same corrected and reflashed firmware,
 immediately before writing this section.
 
-\subsection{Diagnostic methodology: comparison against vendor reference code}
+\subsection{Diagnostic methodology: verification against vendor reference code}
 \label{sec:diagmethod}
 CA and SWV had been reported, in prior internal testing, to produce flat,
 noisy dummy-cell output with no discernible decay or peak, while CV and OCP
@@ -21,27 +22,27 @@ noisy dummy-cell output with no discernible decay or peak, while CV and OCP
 normally. Because the AD5941 is characterized, commercial silicon, the
 working hypothesis was that the defect was specific to how CA/SWV/DPV
 configured and read that silicon, not a property of the chip itself; the
-most direct way to test that hypothesis was to compare the affected classes
+most direct way to test that hypothesis was to check the affected classes
 against Analog Devices' own reference firmware for the same measurement
 class, register write for register write, rather than re-deriving correct
 behavior from the datasheet alone. \texttt{AD5940\_\allowbreak
-ChronoAmperometric.c/.h} (639\,+\,111 lines) was read in full and compared
+ChronoAmperometric.c/.h} (639\,+\,111 lines) was read in full and checked
 line by line against \texttt{c\_ca.cpp}; \texttt{AD5940\_\allowbreak
 SqrWaveVoltammetry.h}'s configuration struct and the relevant portions of
-\texttt{AD5940\_\allowbreak SqrWaveVoltammetry.c} were compared against
+\texttt{AD5940\_\allowbreak SqrWaveVoltammetry.c} were checked against
 \texttt{c\_swv.cpp}; \texttt{AD5940\_Ramp.c} was
 additionally cross-checked as the reference this project's own
 already-working legacy CV engine is derived from, to confirm the LP-loop
 pattern recurred across independent vendor examples rather than being an
 artifact of one file~\cite{ad5940_examples_github}. No AD5940 reference
 example for DPV exists in Analog Devices' published set (Section~\ref{sec:dpv-no-ref}),
-so \texttt{c\_dpv.cpp} was instead compared against the now-corrected
+so \texttt{c\_dpv.cpp} was instead checked against the now-corrected
 \texttt{c\_ca.cpp}/\texttt{c\_swv.cpp} pattern. A second, deeper pass of
 the same file-by-file/register-by-register method, together with a new
 diagnostic serial line printed on every RTIA calibration
-(\texttt{RTIACAL,<magnitude>,<phase>,<fRcal>}), surfaced nine further
-defects (Section~\ref{sec:otherdefects}) not visible from the first pass
-alone.
+(\texttt{RTIACAL,\allowbreak<magnitude>,\allowbreak<phase>,\allowbreak<fRcal>}), surfaced the
+further defects of Section~\ref{sec:otherdefects}, not visible from the
+first pass alone.
 
 \subsection{Defect 1: excitation/sensing loop selection}
 \label{sec:rootcause}
@@ -128,29 +129,30 @@ ADC code convention and Analog Devices' own
 \texttt{AppCHRONOAMPCalcCurrent()} reference
 implementation~\cite{ad5940_examples_github}.
 
-\subsection{Nine further defects}
+\subsection{Further signal-chain and calibration corrections}
 \label{sec:otherdefects}
-A second, deeper diagnostic pass surfaced nine additional defects,
-summarized in Table~\ref{tab:otherdefects}. Several are individually more
-consequential than Defects 1--2: D-RCAL in particular is a systematic
-current-\emph{scale} error that a linearity fit cannot detect, because
-$R^2$ is invariant under an affine rescaling of the measured variable --
-it changes only how large the number is, not how straight the line
-looks. Every one of D-PGA, D-VZEROBUF, D-SIGN, and D-WAKE existed in three
-verbatim copies (Section~\ref{sec:oop}), plus a fourth, unreachable copy
-in \texttt{electrochemical\_methods.cpp} confirmed dead via the live
+A second, deeper diagnostic pass surfaced the further defects summarized
+in Table~\ref{tab:otherdefects}. Several are individually more
+consequential than the excitation-loop and ADC-convention defects above
+(Sections~\ref{sec:rootcause}--\ref{sec:adcfix}): D-RCAL in particular is a
+systematic current-\emph{scale} error that a linearity fit cannot detect,
+because $R^2$ is invariant under an affine rescaling of the measured
+variable -- it changes only how large the number is, not how straight the
+line looks. Every one of D-PGA, D-VZEROBUF, D-SIGN, and D-WAKE existed in
+three verbatim copies (Section~\ref{sec:oop}), plus a fourth, unreachable
+copy in \texttt{electrochemical\_methods.cpp} confirmed dead via the live
 command-dispatch table in \texttt{communication.cpp}; each had to be found
 and fixed three times over.
 
 \begin{table*}[!t]
-\renewcommand{\arraystretch}{1.25}
-\caption{Nine further defects found by the diagnostic method of
-Section~\ref{sec:diagmethod}, beyond the two of
+\renewcommand{\arraystretch}{0.95}
+\caption{Further signal-chain and calibration corrections found by the
+diagnostic method of Section~\ref{sec:diagmethod}, beyond the two of
 Sections~\ref{sec:rootcause}--\ref{sec:adcfix}.}
 \label{tab:otherdefects}
 \centering
-\footnotesize
-\begin{tabular}{@{}p{1.7cm}p{2.3cm}p{6.3cm}p{4.5cm}@{}}
+\scriptsize
+\begin{tabular}{@{}p{1.7cm}p{2.3cm}p{6.5cm}p{4.9cm}@{}}
 \toprule
 ID & File & Defect & Effect \\
 \midrule
@@ -237,7 +239,7 @@ Declared RCAL & Calibrated RTIA & Recovered $R$ & Error \\
 
 \subsection{Dummy-cell validation protocol}
 \label{sec:protocol}
-All eleven defects were corrected, and the firmware was then rebuilt and
+All defects were corrected, and the firmware was then rebuilt and
 reflashed, before any of the validation data in
 Section~\ref{sec:perfresults} was collected. Two loads were used: a plain
 \SI{10}{\kilo\ohm} axial resistor across the WE/CE terminals, and a
@@ -254,18 +256,19 @@ Section~\ref{sec:perfresults} was collected in a single session on a
 freshly reset board, immediately following the D-WAIT2 fix;
 Section~\ref{sec:discussion} discusses why a freshly reset board matters.
 
-\subsection{Comparison outcome: deliberate differences vs.\ genuine gaps}
-\label{sec:comparison-outcome}
-Beyond the eleven defects diagnosed above, the file-by-file comparison
+\subsection{Verification outcome: deliberate differences vs.\ genuine gaps}
+\label{sec:verification-outcome}
+Beyond the defects diagnosed above, the file-by-file verification
 against Analog Devices' reference examples surfaced several other
 differences. Table~\ref{tab:summary} classifies each: matched (now
 identical in substance, or fixed by this work), a deliberate choice
 appropriate to this instrument's live, host-driven use case
 (Section~\ref{sec:deliberate}), or a genuine, unreconciled gap.
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
-\footnotesize
+\scriptsize
+\renewcommand{\arraystretch}{0.92}
 \setlength{\tabcolsep}{4pt}
 \caption{This project's CA/SWV/DPV firmware vs.\ Analog Devices' reference
 examples, post-fix.}
@@ -292,7 +295,7 @@ Sustained CA/SWV/DPV current vs. potential & Tracks applied potential & Does not
 \subsection{Performance validation on the corrected firmware}
 \label{sec:perfresults}
 All data in this subsection was collected by this paper, on the firmware
-described above after all eleven defects were fixed, immediately following
+described above after all defects were fixed, immediately following
 a fresh reset (Section~\ref{sec:protocol}).
 
 \subsubsection{Cyclic voltammetry: accuracy and repeatability}
@@ -426,5 +429,5 @@ now-confirmed-correct LP-loop/D-SIGN/D-WAKE pattern shared with CA and
 SWV under the reasoning given in Section~\ref{sec:diagmethod}.
 Figure~\ref{fig:dpv} is real hardware evidence the fix works on this
 instrument, but it should be read as validated \emph{empirically}, not
-\emph{by reference comparison}, unlike CA and SWV, and remains subject to
+\emph{against a vendor reference}, unlike CA and SWV, and remains subject to
 the same sustained-current caveat as both (Section~\ref{sec:discussion}).

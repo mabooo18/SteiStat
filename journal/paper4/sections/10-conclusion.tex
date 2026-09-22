@@ -4,10 +4,10 @@
 This paper reported the design, firmware implementation, an honest
 object-oriented architecture audit, and a hardware-validated correctness
 campaign for Steistat, our own open-source, low-cost AD5941/RP2040
-potentiostat. Direct, file-by-file and register-by-register comparison
+potentiostat. Direct, file-by-file and register-by-register verification
 against Analog Devices' own reference examples, together with the
-instrument's own diagnostic instrumentation, found and fixed eleven
-concrete firmware defects: an excitation/sensing-loop misconfiguration, an
+instrument's own diagnostic instrumentation, found and fixed concrete
+firmware defects: an excitation/sensing-loop misconfiguration, an
 ADC zero-point convention error, a calibration-resistor declaration that
 scaled every reported current by a fixed, linearity-invisible factor, a
 runtime calibration command that silently failed to reach the measurement

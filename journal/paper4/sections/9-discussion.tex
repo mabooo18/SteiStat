@@ -2,15 +2,15 @@
 \label{sec:discussion}
 
 \subsection{Different kinds of bug, and why some evaded a linearity check}
-The eleven defects fixed in this paper are not structurally alike, and
+The defects fixed in this paper are not structurally alike, and
 that difference is itself instructive for anyone debugging a similar
 commercial-AFE instrument. Defect~1 (Section~\ref{sec:rootcause}) is a
 configuration-level mistake -- using a real, working AD5941 capability
-(the HS loop) for the wrong purpose -- diagnosable by direct comparison
+(the HS loop) for the wrong purpose -- diagnosable by direct verification
 against vendor reference code because the correct configuration already
 existed, fully specified, in Analog Devices' own examples. Defect~2
 (Section~\ref{sec:adcfix}) is a numerical-convention bug that a
-comparison at the level of ``which loop is configured'' would not by
+check at the level of ``which loop is configured'' would not by
 itself have caught; it was only found by inspecting raw ADC codes
 alongside converted values and cross-checking the arithmetic against the
 vendor's own formula. D-RCAL (Section~\ref{sec:otherdefects}) is
@@ -123,7 +123,7 @@ firmware constant change.
   sample interval is the requested period plus however long the
   measurement itself took, not the vendor's hardware-guaranteed exact
   output data rate; at low sample rates the discrepancy is proportionally
-  larger. This is unrelated to, and not fixed by, the eleven corrections
+  larger. This is unrelated to, and not fixed by, the corrections
   reported in this paper.
 \item \textbf{No on-chip sequencer.} The AD5941's dedicated fast
   single-shot transient sequence, meant for exactly the kind of fast

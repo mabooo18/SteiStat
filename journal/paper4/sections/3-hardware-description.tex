@@ -31,14 +31,14 @@ Section~\ref{sec:bom}). The AD5941 supplies the entire analog measurement
 chain -- both excitation loops, both transimpedance stages, the ADC, and
 the DFT engine -- as characterized, off-the-shelf silicon~\cite{devices2024ad5940};
 the RP2040 MCU is responsible only for register sequencing, host
-communication, and unit conversion. This is exactly why the eleven defects
+communication, and unit conversion. This is exactly why the defects
 diagnosed in this paper (Section~\ref{sec:validation}) are firmware
 defects, not analog ones: each is a matter of which of the AD5941's own,
 correctly-functioning internal paths and states the firmware asks for, how
 it declares the on-board calibration resistor it measures against, and how
 it interprets the codes and results those paths return.
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \footnotesize
 \setlength{\tabcolsep}{4pt}
@@ -153,7 +153,7 @@ was not a class at all; and \texttt{C\_CA::ConfigDCMeasurement()},
 were verbatim-duplicated, together with a fourth, unreachable copy in a
 dead free-function file, \texttt{electrochemical\_methods.cpp}. That
 duplication was not merely a maintainability concern in the abstract:
-several of the eleven defects Section~\ref{sec:validation} diagnoses, having
+several of the defects Section~\ref{sec:validation} diagnoses, having
 been made once, existed as three or four literal repetitions and had to be
 found and fixed that many times over.
 

@@ -28,20 +28,20 @@ convention, or a wrong calibration-resistor declaration each tends to
 produce output that is either visibly broken -- flat, noisy, or
 discontinuous -- or, worse, output that looks entirely plausible while
 being systematically wrong by a fixed multiplicative factor; both failure
-modes are easy to miss without a correctly-working reference to compare
+modes are easy to miss without a correctly-working reference to check
 against, and neither is prevented merely by using characterized,
 commercial silicon for the analog chain.
 
 Building Steistat directly from Analog Devices' own AD5940 evaluation-kit
 reference examples~\cite{ad5940_examples_github} did not, by itself,
-guarantee a correct instrument. This paper reports an eleven-defect
+guarantee a correct instrument. This paper reports a systematic
 diagnostic and correction campaign, found by the most direct method
 available for a commercial-AFE design: comparing our implementation, file
 by file and register by register, against the performance and
 register-level behavior of Analog Devices' own reference examples for the
 same class of measurement, and, where no such example exists, against the
 instrument's own independently-correct legacy code paths and datasheet
-formulas. Two of the eleven defects (excitation/sensing loop selection and
+formulas. Two of these defects (excitation/sensing loop selection and
 ADC zero-point convention) directly explain a previously-reported ``flat,
 noisy scatter with no discernible decay or peak'' failure in
 chronoamperometry (CA) and square-wave voltammetry (SWV) against a
@@ -65,14 +65,14 @@ does not change the \emph{shape} of a response, only its scale.
   encapsulation, no inheritance or polymorphism was used anywhere in the
   codebase, and three method classes contained verbatim-duplicated
   measurement-configuration code.
-\item A structured, file-by-file and register-by-register comparison of
+\item A structured, file-by-file and register-by-register verification of
   this project's CA/SWV/DPV firmware against Analog Devices' own
   \texttt{AD5940\_ChronoAmperometric}, \texttt{AD5940\_SqrWaveVoltammetry},
   and \texttt{AD5940\_Ramp} reference examples~\cite{ad5940_examples_github},
   using the vendor's own code as ground truth rather than the presence of a
   \texttt{class} keyword or a plausible-looking register write.
-\item Diagnosis and correction of eleven concrete firmware defects
-  (Section~\ref{sec:validation}) found by that comparison and by the
+\item Diagnosis and correction of concrete firmware defects
+  (Section~\ref{sec:validation}) found by that verification process and by the
   instrument's own diagnostic instrumentation, together explaining a
   previously-reported CA/SWV data-quality failure and a separate,
   previously-undetected $+424\,\%$ current-scale error, and the observation

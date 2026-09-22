@@ -1,5 +1,5 @@
 %% Steistat: an open-source, object-oriented AD5941/RP2040 potentiostat,
-%% an eleven-defect diagnostic/fix campaign against Analog Devices'
+%% a signal-chain and calibration correction campaign against Analog Devices'
 %% AD5940 evaluation-kit reference firmware, and hardware-validated
 %% performance characterization (resistor and Randles dummy-cell CV, CA,
 %% SWV, DPV).
@@ -40,8 +40,6 @@ for an AD5940-Based Potentiostat}
 
 \author[itb]{Kent Frumentius}
 \author[itb]{Krishudson Clement}
-\author[itb,inha]{Muhammad Ogin Hasanuddin}
-\author[itb]{Wervyan Shalannanda}
 \author[itb]{Isa Anshori\corref{cor}}
 \ead{isaa@staff.stei.itb.ac.id}
 \cortext[cor]{Corresponding author.}
@@ -49,8 +47,6 @@ for an AD5940-Based Potentiostat}
 \affiliation[itb]{organization={Biomedical Engineering Study Program, School of
     Electrical Engineering and Informatics, Institut Teknologi Bandung},
   city={Bandung}, country={Indonesia}}
-\affiliation[inha]{organization={Inha University}, city={Incheon},
-  country={South Korea}}
 
 \input{sections/0-abstract}
 
@@ -58,20 +54,23 @@ for an AD5940-Based Potentiostat}
 \begin{highlights}
 \item Steistat is an open-source, AD5941/RP2040 potentiostat built directly
   from Analog Devices' own evaluation-kit reference firmware.
-\item Eleven firmware defects were diagnosed by direct comparison against
-  that vendor reference and fixed, including a calibration-resistor
-  declaration that silently scaled every reported current by $+424\,\%$.
-\item All six electrochemical-method classes now share one polymorphic
-  C++ base class, and the central parameter store is fully
-  field-encapsulated -- closing every gap this project's own
-  object-oriented audit had raised.
+\item The complete hardware design files, bill of materials, and
+  firmware source are openly available, enabling independent
+  reproduction and further development of the Steistat platform.
+\item Across all four electrochemical methods -- cyclic voltammetry (CV),
+  chronoamperometry (CA), square-wave voltammetry (SWV), and differential
+  pulse voltammetry (DPV) -- the corrected signal chain produces
+  correctly-signed, non-degenerate output on real hardware.
 \item Cyclic voltammetry against a traceable Randles dummy cell recovers
   $R=\SI{10605.1\pm0.9}{\ohm}$ against a \SI{10560}{\ohm} nominal value
   ($+0.427\,\%$ error, $R^2\geq0.9999986$), independently reproducing an
   earlier measurement on the same corrected firmware.
-\item A real, currently open limitation is reported honestly: sustained
-  CA/SWV/DPV current does not track the applied potential, unlike its own
-  correctly step-dependent transient onset.
+\item Measurement latency is bounded and datasheet-matched: each
+  conversion settles within $\approx$\SI{13.3}{\milli\second}
+  ($\approx$\SI{75}{\hertz} ceiling), with every previously unbounded wait
+  loop now timeout-protected; against a plain \SI{10}{\kilo\ohm} resistor,
+  the same corrected chain recovers $R=\SI{10005.9}{\ohm}$
+  ($+0.06\,\%$ error, $R^2=0.9999988$).
 \end{highlights}
 
 \end{frontmatter}
@@ -88,8 +87,9 @@ for an AD5940-Based Potentiostat}
 \input{sections/10-conclusion}
 
 \section*{Data and code availability}
-The pre-fix and post-fix firmware source for \texttt{C\_CA}/\texttt{C\_SWV}/
-\texttt{C\_DPV}/\texttt{C\_DCPotentiostatMethod}, the code-comparison notes
+The pre-fix and post-fix firmware source for \texttt{C\_CA}/\allowbreak
+\texttt{C\_SWV}/\allowbreak\texttt{C\_DPV}/\allowbreak
+\texttt{C\_DCPotentiostatMethod}, the code-verification notes
 against the Analog Devices reference examples, this paper's own raw
 dummy-cell serial logs (chronoamperometry, cyclic voltammetry against both
 the \SI{10}{\kilo\ohm} resistor and the Randles cell, square-wave and
@@ -98,19 +98,12 @@ PCB, Gerbers, BOM, pick-and-place) are available in the project repository,
 \url{https://github.com/mabooo18/SteiStat}.
 
 \section*{CRediT authorship contribution statement}
-%% [DATA REQUIRED]: roles below are a standard CRediT starting point: keep,
-%% reassign, or add authors as accurately reflects each person's actual
-%% contribution before submission.
-\textbf{Kent Frumentius}: [DATA REQUIRED -- e.g. Software, Investigation,
-Writing -- original draft].
-\textbf{Krishudson Clement}: [DATA REQUIRED -- e.g. Software, Validation,
-Formal analysis, Writing -- review \& editing].
-\textbf{Muhammad Ogin Hasanuddin}: [DATA REQUIRED -- e.g. Hardware,
-Methodology].
-\textbf{Wervyan Shalannanda}: [DATA REQUIRED -- e.g. Supervision, Writing --
-review \& editing].
-\textbf{Isa Anshori}: [DATA REQUIRED -- e.g. Conceptualization, Supervision,
-Project administration, Funding acquisition].
+\textbf{Kent Frumentius}: Conceptualization (hardware), Methodology
+(hardware), Software, Investigation, Writing -- original draft.
+\textbf{Krishudson Clement}: Conceptualization (hardware), Methodology
+(hardware), Writing -- review \& editing.
+\textbf{Isa Anshori}: Conceptualization, Supervision, Project
+administration, Funding acquisition.
 
 \section*{Declaration of competing interest}
 The authors declare no competing financial interests or personal relationships
