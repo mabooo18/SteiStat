@@ -23,10 +23,8 @@ an instrument built this way: (i) the firmware architecture needed to
 correctly operate the AFE's two excitation/sensing paths for each
 electrochemical method, and (ii) the software architecture needed to keep
 that firmware maintainable as more methods and features are added. This
-paper documents both for HunStat2, using its own C++ class structure as
-evidence rather than the presence of a \texttt{class} keyword alone
-(Section~\ref{sec:instrument-design}), and focuses its own diagnosis and
-fix on the first concern. A wrong signal path or a wrong ADC convention
+paper focuses its own diagnosis and fix on the first concern. A wrong
+signal path or a wrong ADC convention
 tends to produce output that is visibly, unmistakably broken -- flat,
 noisy, or discontinuous -- which makes it easy to \emph{notice} but not
 necessarily easy to \emph{root-cause} without a correctly-working

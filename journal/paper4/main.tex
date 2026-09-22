@@ -1,0 +1,126 @@
+%% Steistat: an open-source, object-oriented AD5941/RP2040 potentiostat,
+%% an eleven-defect diagnostic/fix campaign against Analog Devices'
+%% AD5940 evaluation-kit reference firmware, and hardware-validated
+%% performance characterization (resistor and Randles dummy-cell CV, CA,
+%% SWV, DPV).
+%% HardwareX article format (Elsevier elsarticle class).
+%% Compile: pdflatex main; bibtex main; pdflatex main x2
+
+\documentclass[preprint,12pt]{elsarticle}
+
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{threeparttable}
+\usepackage{url}
+\usepackage{siunitx}
+\sisetup{detect-weight=true,detect-family=true}
+\usepackage[table]{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta}
+
+\newcommand{\Rcal}{R_{\mathrm{CAL}}}
+\newcommand{\Rtia}{R_{\mathrm{TIA}}}
+\newcommand{\Rs}{R_{s}}
+\newcommand{\Rct}{R_{\mathrm{ct}}}
+
+\graphicspath{{./figures/}}
+
+\journal{HardwareX}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{Steistat: An Open-Source, Object-Oriented AD5941/RP2040
+Potentiostat, With an Eleven-Defect Firmware Correctness Campaign and
+Hardware-Validated Cyclic-Voltammetry Accuracy}
+
+\author[itb]{Kent Frumentius}
+\author[itb]{Krishudson Clement}
+\author[itb,inha]{Muhammad Ogin Hasanuddin}
+\author[itb]{Wervyan Shalannanda}
+\author[itb]{Isa Anshori\corref{cor}}
+\ead{isaa@staff.stei.itb.ac.id}
+\cortext[cor]{Corresponding author.}
+
+\affiliation[itb]{organization={Biomedical Engineering Study Program, School of
+    Electrical Engineering and Informatics, Institut Teknologi Bandung},
+  city={Bandung}, country={Indonesia}}
+\affiliation[inha]{organization={Inha University}, city={Incheon},
+  country={South Korea}}
+
+\input{sections/0-abstract}
+
+%%Research highlights
+\begin{highlights}
+\item Steistat is an open-source, AD5941/RP2040 potentiostat built directly
+  from Analog Devices' own evaluation-kit reference firmware.
+\item Eleven firmware defects were diagnosed by direct comparison against
+  that vendor reference and fixed, including a calibration-resistor
+  declaration that silently scaled every reported current by $+424\,\%$.
+\item All six electrochemical-method classes now share one polymorphic
+  C++ base class, and the central parameter store is fully
+  field-encapsulated -- closing every gap this project's own
+  object-oriented audit had raised.
+\item Cyclic voltammetry against a traceable Randles dummy cell recovers
+  $R=\SI{10605.1\pm0.9}{\ohm}$ against a \SI{10560}{\ohm} nominal value
+  ($+0.427\,\%$ error, $R^2\geq0.9999986$), independently reproducing an
+  earlier measurement on the same corrected firmware.
+\item A real, currently open limitation is reported honestly: sustained
+  CA/SWV/DPV current does not track the applied potential, unlike its own
+  correctly step-dependent transient onset.
+\end{highlights}
+
+\end{frontmatter}
+
+\input{sections/1-specifications}
+\input{sections/2-hardware-in-context}
+\input{sections/3-hardware-description}
+\input{sections/4-design-files-summary}
+\input{sections/5-bill-of-materials}
+\input{sections/6-build-instructions}
+\input{sections/7-operation-instructions}
+\input{sections/8-validation}
+\input{sections/9-discussion}
+\input{sections/10-conclusion}
+
+\section*{Data and code availability}
+The pre-fix and post-fix firmware source for \texttt{C\_CA}/\texttt{C\_SWV}/
+\texttt{C\_DPV}/\texttt{C\_DCPotentiostatMethod}, the code-comparison notes
+against the Analog Devices reference examples, this paper's own raw
+dummy-cell serial logs (chronoamperometry, cyclic voltammetry against both
+the \SI{10}{\kilo\ohm} resistor and the Randles cell, square-wave and
+differential-pulse voltammetry), and all hardware design files (schematic,
+PCB, Gerbers, BOM, pick-and-place) are available in the project repository,
+\url{https://github.com/mabooo18/SteiStat}.
+
+\section*{CRediT authorship contribution statement}
+%% [DATA REQUIRED]: roles below are a standard CRediT starting point: keep,
+%% reassign, or add authors as accurately reflects each person's actual
+%% contribution before submission.
+\textbf{Kent Frumentius}: [DATA REQUIRED -- e.g. Software, Investigation,
+Writing -- original draft].
+\textbf{Krishudson Clement}: [DATA REQUIRED -- e.g. Software, Validation,
+Formal analysis, Writing -- review \& editing].
+\textbf{Muhammad Ogin Hasanuddin}: [DATA REQUIRED -- e.g. Hardware,
+Methodology].
+\textbf{Wervyan Shalannanda}: [DATA REQUIRED -- e.g. Supervision, Writing --
+review \& editing].
+\textbf{Isa Anshori}: [DATA REQUIRED -- e.g. Conceptualization, Supervision,
+Project administration, Funding acquisition].
+
+\section*{Declaration of competing interest}
+The authors declare no competing financial interests or personal relationships
+that could have appeared to influence the work reported in this paper.
+
+\section*{Acknowledgements}
+%% [DATA REQUIRED]: funding sources/acknowledgements, if any.
+
+\bibliographystyle{elsarticle-num}
+\bibliography{references}
+
+\end{document}

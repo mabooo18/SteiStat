@@ -1,0 +1,54 @@
+\section{Bill of materials}
+\label{sec:bom}
+
+Table~\ref{tab:bom} gives the itemized Bill of Materials, generated from
+the current PCB layout (\texttt{Production/bom-1.csv},
+Section~\ref{sec:design-files}) and cross-checked against the schematic
+component values cited throughout this paper (e.g. \texttt{RCAL1}=
+\SI{200}{\ohm}, \texttt{R3}=\SI{560}{\ohm}). Unit prices are single-unit
+list prices from LCSC (component supplier) except the XIAO RP2040 module,
+priced from Seeed Studio's own store; all accessed September 2026.
+Component-only total is \SI{31.07}{} USD per unit; this excludes PCB
+fabrication and SMT assembly labor.
+%% [DATA REQUIRED]: fabrication + assembly cost, once quoted, to complete
+%% the "Cost of hardware" figure in the Specifications table
+%% (Section~\ref{sec:specifications}).
+
+\begin{table}[H]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{threeparttable}
+\caption{Bill of materials.}
+\label{tab:bom}
+\begin{tabular}{@{}p{1.6cm}p{2.6cm}p{1.0cm}p{1.7cm}p{1.3cm}p{1.3cm}@{}}
+\toprule
+Value & Designator(s) & Qty & Supplier part\tnote{a} & Unit price (USD) & Line total (USD) \\
+\midrule
+100 nF & C1,C2,C3,C4,C5,C6,C8,C9,C10,C12,C17 & 11 & LCSC C14663 & 0.0125 & 0.1375 \\
+10 \textmu F & C11 & 1 & LCSC C70225 & 0.0644 & 0.0644 \\
+470 nF & C7,C13,C14,C15 & 4 & LCSC C1623 & 0.0300 & 0.1200 \\
+4.7 \textmu F & C16 & 1 & LCSC C19666 & 0.0298 & 0.0298 \\
+220 pF & C18 & 1 & LCSC C1603 & 0.0084 & 0.0084 \\
+33 nF & C19 & 1 & LCSC C1614 & 0.0096 & 0.0096 \\
+Ferrite bead & FB1,FB2 & 2 & LCSC C88990 & 0.0420 & 0.0840 \\
+10 k$\Omega$ ($\Rtia$ bank/\texttt{RCAL3}) & R1,R2,R4,RCAL3 & 4 & LCSC C25804 & 0.0019 & 0.0076 \\
+560 $\Omega$ & R3 & 1 & LCSC C23204 & 0.0032 & 0.0032 \\
+200 $\Omega$ (\texttt{RCAL1}) & RCAL1 & 1 & LCSC C8218 & 0.0037 & 0.0037 \\
+4.7 k$\Omega$ (\texttt{RCAL2}) & RCAL2 & 1 & LCSC C23162 & 0.0028 & 0.0028 \\
+Test point & TP1 & 1 & LCSC C5199801 & 0.0802 & 0.0802 \\
+AD5941BCPZ-RL7 (AFE) & U1 & 1 & LCSC C650309 & 25.1228 & 25.1228 \\
+Seeed XIAO RP2040 (DIP) & U2 & 1 & Seeed store\tnote{b} & 5.40 & 5.40 \\
+\midrule
+\multicolumn{5}{@{}l}{\textbf{Component-only total (per unit)}} & \textbf{31.07} \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\item[a] LCSC part numbers as recorded in \texttt{Production/bom-1.csv};
+  prices are the lowest listed quantity-break unit price as of access
+  date, not bulk-order pricing.
+\item[b] Not stocked on LCSC at the time of access; priced from
+  \url{https://www.seeedstudio.com} (Seeed's own store), approximate.
+\end{tablenotes}
+\end{threeparttable}
+\end{table}

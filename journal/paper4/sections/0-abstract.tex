@@ -1,0 +1,56 @@
+\begin{abstract}
+This paper reports the design, firmware implementation, object-oriented
+architecture audit, and dummy-cell performance evaluation of Steistat, our
+own low-cost, open-hardware potentiostat built around the Analog Devices
+AD5940 electrochemical analog front end (AFE) and a Seeed Studio XIAO
+RP2040 microcontroller, built directly from the AD5940 datasheet, standard
+three-electrode potentiostat design practice, and the AD5940
+evaluation-kit reference firmware. Direct, register-level comparison of
+this firmware against Analog Devices' own AD5940 reference examples
+identified eleven concrete defects, spanning the excitation/sensing signal
+path, the analog-to-digital conversion convention, the on-board
+calibration-resistor declaration, a runtime calibration command that
+silently failed to reach the measurement path, a resistance-transimpedance
+calibration that froze after the first sweep, an ADC programmable-gain
+enum mismatch, an inverted bias-potential sign convention, a
+current-sinking switch-matrix misconfiguration, an AFE power state left
+hibernating mid-measurement, and two unbounded wait loops capable of
+wedging the instrument indefinitely. All eleven were corrected and, in
+doing so, consolidated the previously verbatim-duplicated per-method
+configuration logic in the chronoamperometry (CA), square-wave voltammetry
+(SWV), and differential-pulse-voltammetry (DPV) classes into a single
+shared base class. Beyond that specific duplication, this paper closes
+every gap the project's own source-level audit had identified: all six
+electrochemical-method classes, including cyclic voltammetry (previously
+outside the class structure entirely, now wrapped in a new \texttt{C\_CV}
+class), sit under one polymorphic base with a genuine inheritance
+relationship, and the central parameter store, \texttt{C\_DataStorage}, is
+now fully field-encapsulated rather than an all-public-fields struct. Both
+structural changes were verified, on physical hardware, to leave this
+paper's own reported measurements unchanged. On the corrected firmware,
+cyclic voltammetry (CV) against a traceable Randles dummy cell
+(nominal DC resistance \SI{10560}{\ohm}) recovers
+$R=\SI{10605.1\pm0.9}{\ohm}$ across five replicate sweeps
+($+0.427\,\%$ error, $R^2\geq0.999998$, $\%\mathrm{RSD}=0.0084\,\%$), and a
+companion check against a plain \SI{10}{\kilo\ohm} resistor recovers
+\SI{10005.9}{\ohm} ($+0.06\,\%$ error, $R^2=0.9999988$). CA's initial,
+step-onset current is correctly signed and monotonic in the applied
+potential across five step levels ($-100$ to $+200$~mV), and SWV/DPV
+produce smooth, bounded differential-current curves with no railing or
+discontinuities. We also report, honestly and without correction in this
+paper, a real, currently open limitation surfaced during this same
+diagnostic work: the \emph{sustained}, steady-state current reported by
+CA, SWV, and DPV does not track the applied potential, a defect distinct
+from the eleven fixed here and, on the evidence available, localized
+upstream of the sensing and conversion stage rather than in it. The paper
+positions its contribution around a diagnosed, evidence-based,
+hardware-validated correctness campaign and a working cyclic-voltammetry
+measurement chain, rather than an unsubstantiated claim that every
+implemented method is presently accurate.
+\end{abstract}
+
+\begin{keyword}
+Potentiostat \sep AD5940 \sep object-oriented design \sep embedded systems
+\sep electrochemical instrumentation \sep firmware debugging \sep
+reference-code comparison \sep dummy cell \sep open-source hardware
+\end{keyword}

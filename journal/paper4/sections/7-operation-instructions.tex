@@ -1,0 +1,105 @@
+\section{Operation instructions}
+\label{sec:operation}
+
+Steistat is controlled entirely over USB-CDC virtual serial at
+\SI{1}{\mega baud} using a compact ASCII command grammar
+(\texttt{src/communication/communication.cpp}); no host GUI is required
+(a Python/Tkinter GUI and \texttt{pyserial} test scripts are provided in
+\texttt{AD5941\_25/python\_ui/} for convenience, and are what this paper's
+own validation data, Section~\ref{sec:validation}, was collected with).
+Connect the electrode header (WE/RE/CE) to either a real electrochemical
+cell or the dummy-cell load of Section~\ref{sec:protocol}, open a serial
+terminal (or script) at \SI{1}{\mega baud}, and issue commands as
+newline-terminated ASCII tokens; multiple tokens may be separated by
+\texttt{;}, \texttt{|}, or newlines in a single write.
+
+\subsection{Status and run commands}
+Table~\ref{tab:runcmds} lists the single-letter commands that trigger a
+measurement or report status; each takes no parameter.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\caption{Run/status commands.}
+\label{tab:runcmds}
+\begin{tabular}{@{}p{1.0cm}p{10.5cm}@{}}
+\toprule
+Cmd & Action \\
+\midrule
+\texttt{?} & Print current parameter state and the command summary line \\
+\texttt{A} & Run chronoamperometry (CA) \\
+\texttt{M} & Run cyclic voltammetry (CV) \\
+\texttt{W} & Run square-wave voltammetry (SWV) \\
+\texttt{D} & Run differential pulse voltammetry (DPV) -- note: \texttt{D}
+  \emph{followed by} a 5-value comma list instead configures CV parameters
+  (below); bare \texttt{D} alone runs DPV \\
+\texttt{O} & Run a standard open-circuit potential (OCP) session \\
+\texttt{E} & Run a standard EIS frequency sweep \\
+\texttt{P} & Run the SeeedStat-compatible dual-sweep EIS routine \\
+\texttt{C} & Run AD5941 PGA gain calibration \\
+\texttt{!} & Print command history \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Parameter commands}
+Each run command uses parameters set beforehand with
+\texttt{<letter><value>} tokens (a space after the letter is optional).
+Table~\ref{tab:paramcmds} lists the parameters this paper's own validation
+protocol (Section~\ref{sec:protocol}) exercises directly; the full set
+(EIS frequency sweep limits, OCP calibration sweeps, direct register
+read/write, etc.) is documented in \texttt{communication.cpp}.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\caption{Parameter commands used by this paper's validation protocol.}
+\label{tab:paramcmds}
+\begin{tabular}{@{}p{2.4cm}p{9.1cm}@{}}
+\toprule
+Command & Meaning \\
+\midrule
+\texttt{1 <mV>} & CA target step potential \\
+\texttt{2 <s>} & CA run duration \\
+\texttt{3 <Hz>} & CA sample rate (firmware ceiling: Section~\ref{sec:params}) \\
+\texttt{4 <mV>} / \texttt{5 <mV>} & SWV staircase start / end potential \\
+\texttt{6 <mV>} & SWV staircase step size \\
+\texttt{7 <mV>} & SWV pulse amplitude \\
+\texttt{8 <Hz>} & SWV pulse frequency \\
+\texttt{9 <mV>} / \texttt{0 <mV>} & DPV staircase start / end potential \\
+\texttt{! <mV>} & DPV staircase step size (note: also the history
+  command with no argument, Table~\ref{tab:runcmds}) \\
+\texttt{\# <mV>} & DPV pulse amplitude \\
+\texttt{D <Vstart>,<Vstop>,<Estep>,<ScanRate>,<CycleNumber>} & Configure
+  CV: potentials and step in mV, scan rate in mV/s, cycle count (integer,
+  no spaces around commas) \\
+\texttt{r <0--7>} & Select LPTIA feedback resistor (Table~\ref{tab:rtia}) \\
+\texttt{c <ohms>} & Declare the fitted calibration resistor $\Rcal$
+  (correct value: \SI{200}{\ohm}, Section~\ref{sec:components}) \\
+\texttt{k <n>} & Select LPTIA topology (bit0: SW13; bits1--3: LPTIARF
+  code), added in this work for hardware characterization \\
+\texttt{@ <0/1>} & Toggle verbose parameter-confirmation echo \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Worked example: chronoamperometry step response}
+The sequence below reproduces the protocol behind
+Figure~\ref{fig:ca-vs-step} (Section~\ref{sec:ca_dummy}): return to a
+\SI{0}{\milli\volt} baseline and let it settle, then apply the target
+step and read the first sample.
+\begin{verbatim}
+2 0.3      # 0.3 s run duration
+3 75       # 75 Hz sample rate
+1 0        # baseline: 0 mV
+A          # run CA, discard (settling)
+1 100      # target step: +100 mV
+A          # run CA -- first "CA,0.0000,..." line is the step-onset sample
+\end{verbatim}
+Each CA run streams \texttt{CA\_START}, then one line per sample
+(\texttt{CA,<t\_s>,<I\_A>,0x<raw\_hex>,<timeout\_flag>}), then
+\texttt{CA\_END}. CV streams \texttt{CV,<V\_mV>,<I>,}; SWV/DPV stream
+\texttt{SWV,<V\_mV>,<dI\_A>} / \texttt{DPV,<V\_mV>,<dI\_A>}, each bracketed
+by their own \texttt{\_START}/\texttt{\_END} markers.

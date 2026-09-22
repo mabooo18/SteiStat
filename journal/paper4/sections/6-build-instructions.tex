@@ -1,0 +1,64 @@
+\section{Build instructions}
+\label{sec:build}
+
+%% [DATA REQUIRED]: these steps are drafted from the design files
+%% (Section~\ref{sec:design-files}) and standard PCB assembly practice;
+%% please verify/expand against how the physical units used in this paper
+%% were actually built before submission.
+
+\subsection{PCB fabrication and assembly}
+\begin{enumerate}
+\item Fabricate the \SI{45.0}{}$\times$\SI{60.0}{\milli\metre}, 2-layer
+  board from \texttt{Hardware/Gerber\_PCB.zip} at any standard PCB
+  manufacturer.
+\item Component footprints (Table~\ref{tab:bom}) are deliberately
+  hand-solder-friendly 0603 passives, except the AD5941 AFE (U1,
+  \texttt{CP-48-4\_ADI-L}, a 48-pin QFN/LGA package). Two build paths:
+  \begin{itemize}
+  \item \textbf{Professional SMT assembly (recommended)}: submit the
+    Gerbers together with \texttt{Production/bom-1.csv} and
+    \texttt{Production/positions.csv} to a PCB assembly service; this
+    covers U1 reliably and is the path
+    \texttt{Hardware/README.md} documents for users less experienced
+    with soldering.
+  \item \textbf{Hand assembly}: hand-solder the 0603 passives, the
+    calibration resistor bank (RCAL1/RCAL2/RCAL3), the ferrite beads, and
+    the pin headers with a fine-tip iron; reflow or hot-air solder U1
+    (AD5941) using its datasheet-recommended profile, since its
+    fine-pitch QFN/LGA package is not practically hand-solderable with an
+    iron alone.
+  \end{itemize}
+\item Solder or socket the Seeed Studio XIAO RP2040 (U2, DIP/pin-header
+  variant) onto its footprint; this part is through-hole and
+  straightforward to hand-solder.
+\item Fit the appropriate calibration jumper/resistor for the intended
+  measurement range if a variant other than the as-shipped
+  \texttt{RCAL1}=\SI{200}{\ohm} is required (Table~\ref{tab:bom}), and
+  confirm the value against \texttt{DEFAULT\_RCAL} in
+  \texttt{src/data\_storage/data\_storage.h} before flashing --
+  Section~\ref{sec:otherdefects}'s Defect~D-RCAL is exactly what happens
+  when these two disagree.
+\end{enumerate}
+
+\subsection{Firmware build and flash}
+\begin{enumerate}
+\item Install the Arduino \texttt{rp2040:rp2040} core (this paper used
+  version 5.6.0) and the bundled libraries under
+  \texttt{Software/Arduino\_Libraries/} (Adafruit NeoPixel, an
+  \texttt{arduino-printf}-based logging helper).
+\item Connect the assembled board via USB; it enumerates as a standard
+  RP2040 board.
+\item Build and flash \texttt{AD5941\_25/AD5941\_25.ino} against the
+  \texttt{rp2040:rp2040:seeed\_xiao\_rp2040} board target, e.g. with
+  \texttt{arduino-cli}:
+\begin{verbatim}
+arduino-cli compile --upload -p <PORT> \
+  --fqbn rp2040:rp2040:seeed_xiao_rp2040 \
+  --libraries Arduino_Libraries AD5941_25
+\end{verbatim}
+\item Confirm a successful flash by opening a serial terminal at
+  \SI{1}{\mega baud} and sending \texttt{?}; the instrument echoes its
+  current parameter state (Section~\ref{sec:operation}) ending in the
+  command summary line
+  \texttt{E=eisScan\ \ P=SeeedStat\ \ A=CA\ \ W=SWV\ \ D=DPV\ \ M=CV\ \ O=OCP\ \ ?=params}.
+\end{enumerate}

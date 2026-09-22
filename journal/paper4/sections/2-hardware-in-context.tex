@@ -1,0 +1,106 @@
+\section{Hardware in context}
+\label{sec:hw-context}
+
+Potentiostats built around Analog Devices' AD5940/AD5941 electrochemical
+analog front end (AFE) have become a recognizable instrument class within
+the open-source, low-cost hardware literature: FreiStat~\cite{bill2023electrochemical},
+HELPStat~\cite{bautista2025helpstat}, GaneStat~\cite{anshori2025ganestat},
+and Vamos et al.'s HunStat2~\cite{vamos2025hunstat2} all use it as their
+AFE, in the same lineage as discrete op-amp designs such as
+CheapStat~\cite{rowe2011cheapstat}. A commercial AFE moves most of the
+burden of getting a potentiostat's analog performance right -- transimpedance
+gain accuracy, switch-matrix leakage, reference-voltage stability -- onto a
+part that Analog Devices manufactures, tests, and characterizes at
+volume~\cite{devices2024ad5940}. It does \emph{not} remove the burden of
+driving that part correctly. The AD5940 exposes two independent,
+purpose-built excitation/sensing paths -- a Low-Power (LP) loop for DC and
+near-DC potentiostat operation, and a High-Speed (HS) loop for AC/impedance
+excitation -- and firmware that configures the wrong one for a given
+method, misinterprets the numeric convention of the raw code the chip
+returns, or declares an on-board calibration resistor's value incorrectly,
+produces code that compiles cleanly and runs without crashing while still
+being physically wrong. Two design concerns recur for an instrument built
+this way: (i) the firmware architecture needed to correctly operate the
+AFE's two excitation/sensing paths for each electrochemical method, and (ii)
+the software architecture needed to keep that firmware maintainable as more
+methods and features are added. A wrong signal path, a wrong ADC
+convention, or a wrong calibration-resistor declaration each tends to
+produce output that is either visibly broken -- flat, noisy, or
+discontinuous -- or, worse, output that looks entirely plausible while
+being systematically wrong by a fixed multiplicative factor; both failure
+modes are easy to miss without a correctly-working reference to compare
+against, and neither is prevented merely by using characterized,
+commercial silicon for the analog chain.
+
+Building Steistat directly from Analog Devices' own AD5940 evaluation-kit
+reference examples~\cite{ad5940_examples_github} did not, by itself,
+guarantee a correct instrument. This paper reports an eleven-defect
+diagnostic and correction campaign, found by the most direct method
+available for a commercial-AFE design: comparing our implementation, file
+by file and register by register, against the performance and
+register-level behavior of Analog Devices' own reference examples for the
+same class of measurement, and, where no such example exists, against the
+instrument's own independently-correct legacy code paths and datasheet
+formulas. Two of the eleven defects (excitation/sensing loop selection and
+ADC zero-point convention) directly explain a previously-reported ``flat,
+noisy scatter with no discernible decay or peak'' failure in
+chronoamperometry (CA) and square-wave voltammetry (SWV) against a
+resistive/capacitive dummy cell, while cyclic voltammetry (CV) and
+open-circuit potential (OCP) -- which use a different, independently-derived
+code path -- continued to run. That asymmetry was itself a clue: whatever
+was wrong was specific to the affected classes' own signal-path
+configuration, not a property of the AFE or the board. The remaining nine
+defects were found during a subsequent, deeper pass of the same diagnostic
+method, and include a calibration-resistor declaration that silently
+scaled every reported current by a fixed, incorrect factor -- the kind of
+defect a plausibility check or a linearity fit cannot detect, because it
+does not change the \emph{shape} of a response, only its scale.
+
+\textbf{Contributions.} This paper makes the following contributions:
+\begin{enumerate}
+\item A structured audit of the firmware's hardware architecture, software
+  architecture, and object-oriented design maturity
+  (Section~\ref{sec:hw-description}), using the actual source code as
+  evidence: of eight C++ classes, only two originally exhibited non-trivial
+  encapsulation, no inheritance or polymorphism was used anywhere in the
+  codebase, and three method classes contained verbatim-duplicated
+  measurement-configuration code.
+\item A structured, file-by-file and register-by-register comparison of
+  this project's CA/SWV/DPV firmware against Analog Devices' own
+  \texttt{AD5940\_ChronoAmperometric}, \texttt{AD5940\_SqrWaveVoltammetry},
+  and \texttt{AD5940\_Ramp} reference examples~\cite{ad5940_examples_github},
+  using the vendor's own code as ground truth rather than the presence of a
+  \texttt{class} keyword or a plausible-looking register write.
+\item Diagnosis and correction of eleven concrete firmware defects
+  (Section~\ref{sec:validation}) found by that comparison and by the
+  instrument's own diagnostic instrumentation, together explaining a
+  previously-reported CA/SWV data-quality failure and a separate,
+  previously-undetected $+424\,\%$ current-scale error, and the observation
+  that, because of contribution 1's duplication, several of them had to be
+  found and fixed three times over, once per affected class.
+\item The full structural refactor that contribution 1's audit motivates,
+  not only the duplication fix: the duplicated per-method configuration,
+  sampling, and conversion logic is collapsed into a single shared base
+  class, \texttt{C\_DCPotentiostatMethod}; all six electrochemical-method
+  classes, including cyclic voltammetry (previously outside the class
+  structure entirely), are brought under one polymorphic
+  \texttt{C\_ElectrochemicalMethod} hierarchy; and the central parameter
+  store, \texttt{C\_DataStorage}, is fully field-encapsulated rather than
+  an all-public-fields struct -- verified on physical hardware to leave
+  every reported measurement unchanged.
+\item Fresh, hardware-validated performance evidence, collected by this
+  paper on the corrected and refactored firmware against both a plain
+  \SI{10}{\kilo\ohm} resistor and a traceable Randles dummy cell, that CV
+  is quantitatively accurate ($R^2\geq0.999998$,
+  $+0.427\,\%$ recovered-resistance error across five replicate sweeps),
+  and an honest report of a real, currently open limitation found in the
+  same work: sustained CA/SWV/DPV current does not track the applied
+  potential, unlike its own correctly step-dependent transient onset.
+\end{enumerate}
+
+Consistent with the scope of this paper, sensor development, analyte
+concentration measurement, and limit-of-detection studies are explicitly
+out of scope; the electrochemical-solution measurement question is
+addressed only to the extent of confirming the instrument executes a real
+electrochemical technique on a traceable resistive/RC load, not to
+characterize any particular chemistry.

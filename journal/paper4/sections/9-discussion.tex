@@ -1,0 +1,138 @@
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Different kinds of bug, and why some evaded a linearity check}
+The eleven defects fixed in this paper are not structurally alike, and
+that difference is itself instructive for anyone debugging a similar
+commercial-AFE instrument. Defect~1 (Section~\ref{sec:rootcause}) is a
+configuration-level mistake -- using a real, working AD5941 capability
+(the HS loop) for the wrong purpose -- diagnosable by direct comparison
+against vendor reference code because the correct configuration already
+existed, fully specified, in Analog Devices' own examples. Defect~2
+(Section~\ref{sec:adcfix}) is a numerical-convention bug that a
+comparison at the level of ``which loop is configured'' would not by
+itself have caught; it was only found by inspecting raw ADC codes
+alongside converted values and cross-checking the arithmetic against the
+vendor's own formula. D-RCAL (Section~\ref{sec:otherdefects}) is
+different again, and more dangerous than either: it is a constant
+multiplicative scaling error, and Table~\ref{tab:rcalsweep} demonstrates
+directly that such an error is invisible to a linearity check -- mean
+$R^2$ moved by only $2\times10^{-6}$ across a $982\times$ span in absolute
+error. A quantitative accuracy check against a traceable reference, not
+just a straight-line fit, is what actually exposed it. D-STALE and
+D-CCMD compound this: even after D-RCAL's declared value is corrected,
+a runtime correction only reaches the measurement path if the command
+that sets it writes the variable that path actually reads, and only takes
+effect on the next sweep if the calibration that consumes it is not
+frozen from power-up. All three had to be fixed together for a runtime
+Rcal correction to work as documented. D-PGA, D-VZEROBUF, D-SIGN, and
+D-WAKE were present despite this project's own OCP and legacy CV paths --
+which use independently-correct conventions -- functioning normally
+throughout, a direct illustration of the risk the duplicated,
+per-method logic (Section~\ref{sec:oop}) carried: a single mistake, made
+once, existed in three literal copies and had to be found and fixed three
+times over. The shared base class introduced in this work
+(Section~\ref{sec:oop}) is intended to prevent exactly that recurrence for
+whatever the next defect turns out to be.
+
+\subsection{What was a deliberate design choice, not a gap}
+\label{sec:deliberate}
+To be fair to this project's own architecture, several of
+Table~\ref{tab:summary}'s differences from the vendor reference are
+intentional and appropriate for this instrument's actual use case -- a
+host-GUI-driven, live-configurable bench instrument -- not oversights.
+Analog Devices' examples are meant to be recompiled per experiment,
+driving the AD5941 through its on-chip sequencer and a wakeup timer so the
+MCU and AFE can sleep between samples, which is a power-optimized design
+appropriate for battery-powered, long-duration monitoring. This project
+instead runs a plain MCU-side polling loop and exposes CA/SWV/DPV
+parameters through the existing ASCII serial protocol, so a user (or the
+host GUI) can change them live without reflashing -- a genuine usability
+advantage for a benchtop instrument where power is not constrained and
+simplicity of the MCU-side control flow matters more than microsecond-level
+timing precision or battery life. Fixing D-SIGN's bias-computation
+subtraction and collapsing the vendor's two-parameter
+\texttt{Vzero}/\texttt{SensorBias} model into one runtime-settable value
+plus one hardcoded constant (Section~\ref{sec:rootcause}) is the same kind
+of reasonable simplification, made at the cost of not being able to reach
+potentials that would require shifting \texttt{Vzero} itself without a
+firmware constant change.
+
+\subsection{Limitations}
+\label{sec:limitations}
+\begin{itemize}
+\item \textbf{Sustained CA/SWV/DPV current does not track applied
+  potential -- open, unfixed.} Section~\ref{sec:ca_dummy} shows the CA
+  first-sample response is correctly signed and monotonic across five
+  applied steps, and SWV/DPV (Section~\ref{sec:swv_dpv}) are smooth and
+  bounded. Samples taken after the first $\approx$\SI{13}{\milli\second}
+  of a sustained CA run, however, converge to a common current
+  independent of the applied step -- a $\pm200$~mV step across the
+  Randles cell's \SI{10.56}{\kilo\ohm} DC resistance should differ by
+  roughly \SI{38}{\micro\ampere} and, in this failure mode, differs by
+  less than \SI{3}{\nano\ampere}. All eight LPTIA feedback-resistor
+  settings and both SW13 filter states (the \texttt{k} command,
+  Section~\ref{sec:components}) were swept and changed nothing, which
+  places the fault upstream of the sensing/conversion stage -- in
+  establishing the LPPA/CE0 cell drive itself -- rather than in
+  Eq.~\eqref{eq:current}'s conversion or in the TIA gain. The
+  sequencer-driven CV path measures the same physical cell correctly
+  (Section~\ref{sec:cv_dummy}), so this is specific to the direct-register
+  CA/SWV/DPV classes, not a property of the AFE or the board. This paper
+  reports this defect honestly, as found, rather than either silently
+  omitting it or claiming these three methods are validated for sustained
+  measurement; root-causing and fixing it is left to future work.
+\item \textbf{A CV timeout requires a full reset, not just the D-WAIT2
+  bound.} Bounding the CV wait (D-WAIT2) stops the instrument wedging
+  indefinitely, but does not by itself restore the AFE to a fully working
+  state: sweeps taken immediately after a reported \texttt{CV\_TIMEOUT}
+  are reproducibly degraded ($R^2$ drops from $\approx0.999999$ to
+  $\approx0.9999$ at unchanged accuracy) and recover only after a full
+  reset. All data reported in Section~\ref{sec:validation} was collected
+  on a freshly reset board for this reason.
+\item \textbf{OOP maturity.} As detailed in Section~\ref{sec:oop}, this
+  paper closes every gap the original audit raised -- encapsulating
+  \texttt{C\_DataStorage}, bringing all six method classes (including
+  cyclic voltammetry, via a new \texttt{C\_CV} wrapper) under one
+  polymorphic \texttt{C\_ElectrochemicalMethod} hierarchy, and eliminating
+  the triplicated configuration logic -- verified against this paper's own
+  unchanged CV accuracy result after the refactor
+  (Section~\ref{sec:validation}). This is not the same claim as a
+  maximally-abstracted architecture: there remains exactly one inheritance
+  level, no call site dispatches through a base-class pointer (each
+  \texttt{Dispatch<Method>()} still names its concrete class), and
+  \texttt{C\_DataStorage}'s new accessors are mechanical get/set pairs, not
+  a richer domain interface. The paper's claim is scoped to what the audit
+  actually measured -- encapsulation, inheritance/polymorphism, and
+  duplication -- not to architectural maturity in general.
+\item \textbf{EIS not re-validated.} This work's scope was the reported
+  CA/SWV data-quality failure and the further defects it led to; EIS,
+  which already used the HS loop appropriately for its AC excitation
+  requirement, was not re-tested against the dummy cell in this work.
+\item \textbf{RCAL's own tolerance is the next-largest unexplained
+  residual.} The Randles-cell CV accuracy result
+  (Section~\ref{sec:cv_dummy}) is repeatable to $0.0084\,\%$ but biased
+  $+0.427\,\%$ high, a residual that exceeds the component tolerance
+  stack ($\approx\pm0.11\,\%$) of the Randles cell's own parts. The
+  dominant untested candidate is the fitted \SI{200}{\ohm} RCAL1's own
+  tolerance, which enters the scale directly via the calibration this
+  paper's fix now performs correctly and is not separable through that
+  same measurement path. Characterizing RCAL1 against a traceable
+  standard is the single highest-value next measurement.
+\item \textbf{Sample timing precision.} This project's \texttt{delay()}-based
+  sample interval is the requested period plus however long the
+  measurement itself took, not the vendor's hardware-guaranteed exact
+  output data rate; at low sample rates the discrepancy is proportionally
+  larger. This is unrelated to, and not fixed by, the eleven corrections
+  reported in this paper.
+\item \textbf{No on-chip sequencer.} The AD5941's dedicated fast
+  single-shot transient sequence, meant for exactly the kind of fast
+  capacitive decay a chronoamperometry step produces, is not used by this
+  project's polling-loop architecture (Section~\ref{sec:deliberate}); a
+  future revision adopting it would trade implementation complexity for
+  finer time resolution and lower power, and may also be relevant to
+  root-causing the sustained-current defect above.
+\item \textbf{OCP.} Not independently validated on this baseline; OCP's
+  calibration path uses a distinct code path from CA/SWV/DPV and was not
+  in this paper's diagnostic scope.
+\end{itemize}

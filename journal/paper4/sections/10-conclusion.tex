@@ -1,0 +1,58 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+This paper reported the design, firmware implementation, an honest
+object-oriented architecture audit, and a hardware-validated correctness
+campaign for Steistat, our own open-source, low-cost AD5941/RP2040
+potentiostat. Direct, file-by-file and register-by-register comparison
+against Analog Devices' own reference examples, together with the
+instrument's own diagnostic instrumentation, found and fixed eleven
+concrete firmware defects: an excitation/sensing-loop misconfiguration, an
+ADC zero-point convention error, a calibration-resistor declaration that
+scaled every reported current by a fixed, linearity-invisible factor, a
+runtime calibration command that silently failed to reach the measurement
+path, a transimpedance-gain calibration frozen at power-up, an ADC
+programmable-gain enum mismatch, an inverted bias-potential sign
+convention, a switch-matrix misconfiguration that partly sank cell current
+into the wrong node, an AFE left hibernating mid-measurement, and two
+unbounded wait loops capable of wedging the instrument indefinitely.
+Several of these existed in three or four verbatim copies, once per
+affected method class -- the direct, measured cost of the duplication our
+own source-level audit had flagged -- and each had to be found and fixed
+that many times over.
+
+On the corrected firmware, this paper's own fresh hardware measurements
+show cyclic voltammetry is quantitatively accurate: against a traceable
+Randles dummy cell, five replicate sweeps recover
+$R=\SI{10605.1\pm0.9}{\ohm}$ against a \SI{10560}{\ohm} nominal value
+($+0.427\,\%$ error, $\%\mathrm{RSD}=0.0084\,\%$, $R^2\geq0.9999986$ on
+every sweep), independently reproducing an earlier $n=10$ measurement on
+this same corrected signal chain to within \SI{0.1}{\ohm}; against a plain
+\SI{10}{\kilo\ohm} resistor, the same protocol recovers \SI{10005.9}{\ohm}
+($+0.06\,\%$ error, $R^2=0.9999988$). Chronoamperometry's initial,
+step-onset current is correctly signed and monotonic across five applied
+potential steps, and square-wave and differential-pulse voltammetry
+produce smooth, bounded differential-current curves free of the
+railing/noise previously reported. This paper also reports, honestly and
+without correcting it here, a real defect found in the same diagnostic
+work: the \emph{sustained} current reported by CA, SWV, and DPV does not
+track the applied potential, evidence points to a cause upstream of the
+sensing and conversion stage rather than within it, and root-causing this
+is left to future work rather than folded into an overclaimed validation.
+An accompanying, evidence-based audit of the firmware's object-oriented
+design found real but limited object orientation, and this paper closes
+every gap that audit raised: all six method classes, including cyclic
+voltammetry (previously outside the class structure entirely, now wrapped
+in a new \texttt{C\_CV} class), sit under one polymorphic
+\texttt{C\_ElectrochemicalMethod} base with a genuine inheritance
+relationship, and the central parameter store, \texttt{C\_DataStorage}, is
+fully field-encapsulated rather than an all-public-fields struct -- both
+changes verified on physical hardware to leave this paper's own CV
+accuracy result unchanged. This is not a claim of a maximally-abstracted
+architecture: one inheritance level, no call-site dispatch through
+base-class pointers, and mechanical get/set accessors are what this paper
+delivers, not a richer domain design. Future work should characterize the
+fitted RCAL1 resistor against a traceable standard, root-cause and fix the
+sustained CA/SWV/DPV defect, re-validate EIS, and complete the
+sample-timing and on-chip-sequencer improvements identified in
+Section~\ref{sec:limitations}.
