@@ -15,21 +15,20 @@ and firmware are built from, all available in the project repository
 \toprule
 Design file name & File type & Location and description \\
 \midrule
-\texttt{STEI\_Bstat\_v1.2.kicad\_sch} & KiCad schematic & \texttt{Hardware/} and
-  \texttt{Software/AD5941\_25/STEI\_Bstat\_v1.2/} -- full schematic,
-  AD5941 AFE, XIAO RP2040 carrier, RCAL/RCAL2/RCAL3 calibration bank, WE/RE/CE
-  header \\
-\texttt{STEI\_Bstat\_v1.2.kicad\_pcb} & KiCad PCB layout & Same folders --
+\texttt{Hardware/\allowbreak STEI\_Bstat\_v1.2.kicad\_sch} & KiCad schematic &
+  Full schematic: AD5941 AFE, XIAO RP2040 carrier, RCAL/RCAL2/RCAL3
+  calibration bank, WE/RE/CE header \\
+\texttt{Hardware/\allowbreak STEI\_Bstat\_v1.2.kicad\_pcb} & KiCad PCB layout &
   \SI{45.0}{} $\times$ \SI{60.0}{\milli\metre}, 2-layer board \\
-Gerber/drill set & Gerber (RS-274X) & \texttt{Hardware/Gerber\_PCB.zip} --
-  fabrication files for any PCB manufacturer \\
-\texttt{Production/bom-1.csv} & CSV bill of materials & Machine-generated
+\texttt{Hardware/\allowbreak Gerber\_PCB.zip} & Gerber (RS-274X) &
+  Fabrication files for any PCB manufacturer \\
+\texttt{Hardware/\allowbreak Production/\allowbreak bom-1.csv} & CSV bill of materials & Machine-generated
   from the current \texttt{.kicad\_pcb}; source for Table~\ref{tab:bom} \\
-\texttt{Production/positions.csv} & CSV pick-and-place & Component
+\texttt{Hardware/\allowbreak Production/\allowbreak positions.csv} & CSV pick-and-place & Component
   placement (designator, footprint, X/Y, rotation, side) for SMT assembly \\
-\texttt{Schematic\_AD5941 corr. circ. diag.\_2025-12-14.pdf} & PDF & Rendered
+\texttt{Hardware/\allowbreak Schematic\_AD5941 corr. circ. diag.\_2025-12-14.pdf} & PDF & Rendered
   schematic for quick reference without KiCad installed \\
-\texttt{AD5941\_25/} & Arduino sketch (C++) & Complete firmware source:
+\texttt{Software/\allowbreak AD5941\_25/} & Arduino sketch (C++) & Complete firmware source:
   \texttt{AD5941\_25.ino}, \texttt{cv.cpp}/\texttt{rampTest.cpp} (legacy CV
   engine), \texttt{src/electrochemical\_methods/} (\texttt{C\_CA},
   \texttt{C\_SWV}, \texttt{C\_DPV}, \texttt{C\_DCPotentiostatMethod},
