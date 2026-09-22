@@ -1,0 +1,155 @@
+\section{Methods}
+\label{sec:methods}
+
+\subsection{Instrument and firmware baseline}
+The instrument under test is HunStat2 (Section~\ref{sec:instrument-design}).
+The defects diagnosed below were found and fixed in
+\texttt{AD5941\_\allowbreak 25/\allowbreak src/\allowbreak
+electrochemical\_\allowbreak methods/\allowbreak c\_ca.cpp},
+\texttt{c\_swv.cpp}, and \texttt{c\_dpv.cpp} during this project's firmware
+development; no other files were changed in the process. The validation
+data referenced from the companion manuscripts in
+Section~\ref{sec:validation} was collected on this same firmware, compiled
+with the \texttt{rp2040:rp2040} Arduino core via \texttt{arduino-cli} and
+flashed to a physical XIAO RP2040 board, which carries both corrections
+forward.
+
+\subsection{Diagnostic methodology: comparison against vendor reference code}
+\label{sec:diagmethod}
+CA and SWV had been reported, in prior internal testing, to produce flat,
+noisy dummy-cell output with no discernible decay or peak, while CV and OCP
+-- which execute through different, independently-written code -- worked
+normally. Because the AD5941 is characterized, commercial silicon, the
+working hypothesis was that the defect was specific to how CA/SWV/DPV
+configured and read that silicon, not a property of the chip itself; the
+most direct way to test that hypothesis was to compare the affected classes
+against Analog Devices' own reference firmware for the same measurement
+class, register write for register write, rather than re-deriving correct
+behavior from the datasheet alone. \texttt{AD5940\_\allowbreak
+ChronoAmperometric.c/.h} (639\,+\,111 lines) was read in full and compared
+line by line against \texttt{c\_ca.cpp}; \texttt{AD5940\_\allowbreak
+SqrWaveVoltammetry.h}'s configuration struct and the relevant portions of
+\texttt{AD5940\_\allowbreak SqrWaveVoltammetry.c} were compared against
+\texttt{c\_swv.cpp}; \texttt{AD5940\_Ramp.c} was
+additionally cross-checked as the reference this project's own
+already-working legacy CV engine is derived from, to confirm the LP-loop
+pattern recurred across independent vendor examples rather than being an
+artifact of one file~\cite{ad5940_examples_github}. No AD5940 reference
+example for DPV exists in Analog Devices' published set (Section~\ref{sec:dpv-no-ref}),
+so \texttt{c\_dpv.cpp} was instead compared against the now-corrected
+\texttt{c\_ca.cpp}/\texttt{c\_swv.cpp} pattern, under the reasoning that DPV
+is structurally a staircase-plus-single-sided-pulse variant of the same
+underlying LP-loop measurement, not a different signal path.
+
+\subsection{Defect 1: excitation/sensing loop selection}
+\label{sec:rootcause}
+\texttt{c\_ca.cpp}, \texttt{c\_swv.cpp}, and \texttt{c\_dpv.cpp} configured
+\texttt{HSLoopCfg\_Type} -- HSDAC excitation, HSTIA sensing via
+\texttt{ADCMUXP\_HSTIA\_P}/\texttt{ADCMUXN\_HSTIA\_N} -- for what is
+fundamentally a DC/staircase potential-step measurement. Every Analog
+Devices reference example for this class of method instead configures
+\texttt{LPLoopCfg\_Type}: the LPDAC's 12-bit \emph{Vbias} and 6-bit
+\emph{Vzero} channels set the working-electrode bias point (Vzero, applied
+via the LPTIA's virtual-ground input) and the counter-electrode drive
+(Vbias, applied through the low-power potentiostat amplifier, LPPA, in
+feedback with the reference electrode), while the LPTIA senses current at
+\texttt{ADCMUXP\_LPTIA0\_P}/\texttt{ADCMUXN\_LPTIA0\_N}. The applied
+potential is set from the LPDAC codes as
+\begin{equation}
+V_{\mathrm{zero}} = \SI{200}{\milli\volt} + \mathrm{code}_{6}\cdot\mathrm{LSB}_{6},
+\qquad \mathrm{LSB}_{6} = 64\cdot\mathrm{LSB}_{12},
+\label{eq:vzero}
+\end{equation}
+\begin{equation}
+V_{\mathrm{bias}} - V_{\mathrm{zero}} = \mathrm{code}_{12}\cdot\mathrm{LSB}_{12},
+\qquad \mathrm{LSB}_{12} = \frac{\SI{2200}{\milli\volt}}{4095},
+\label{eq:vbias}
+\end{equation}
+matching Analog Devices' own \texttt{AppCHRONOAMPSeqCfgGen()} formula
+exactly; the fix reconfigures all three classes' \texttt{ConfigDCMeasurement()}
+to the LP loop following Eqs.~\eqref{eq:vzero}--\eqref{eq:vbias}, with the
+existing user-facing TIA-selection command (\texttt{r0}--\texttt{r7})
+remapped from the eight-value HSTIA table to eight representative LPTIA
+$\Rtia$ codes chosen to keep approximately the same resistance range
+(Table~\ref{tab:rtia}).
+
+\begin{table}[h]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\caption{TIA-selection command remapping (\texttt{r0}--\texttt{r7}).}
+\label{tab:rtia}
+\begin{tabular}{@{}p{0.9cm}p{2.3cm}p{2.6cm}p{1.7cm}@{}}
+\toprule
+Code & Old (HSTIA) & New (LPTIA) & New value \\
+\midrule
+0 & \SI{200}{\ohm}   & \texttt{LPTIARTIA\_200R} & \SI{110}{\ohm} \\
+1 & \SI{1}{\kilo\ohm}  & \texttt{LPTIARTIA\_1K}   & \SI{1}{\kilo\ohm} \\
+2 & \SI{5}{\kilo\ohm}  & \texttt{LPTIARTIA\_4K}   & \SI{4}{\kilo\ohm} \\
+3 & \SI{10}{\kilo\ohm} & \texttt{LPTIARTIA\_10K}  & \SI{10}{\kilo\ohm} \\
+4 & \SI{20}{\kilo\ohm} & \texttt{LPTIARTIA\_20K}  & \SI{20}{\kilo\ohm} \\
+5 & \SI{40}{\kilo\ohm} & \texttt{LPTIARTIA\_40K}  & \SI{40}{\kilo\ohm} \\
+6 & \SI{80}{\kilo\ohm} & \texttt{LPTIARTIA\_85K}  & \SI{85}{\kilo\ohm} \\
+7 & \SI{160}{\kilo\ohm}& \texttt{LPTIARTIA\_160K} & \SI{160}{\kilo\ohm} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The one functional difference from the vendor reference: Analog Devices'
+\texttt{Vzero} is a user-configurable field (defaulting to \SI{1100}{\milli\volt}
+in their example); this project hardcodes $V_{\mathrm{zero}}=\SI{1100}{\milli\volt}$
+as a constant and exposes only the equivalent of their \texttt{SensorBias}
+as the runtime-settable parameter, driven by the serial \texttt{1<value>}
+command. This was a deliberate simplification appropriate to a
+host-driven, live-configurable instrument (Section~\ref{sec:deliberate}),
+not part of the fix.
+
+\subsection{Defect 2: ADC zero-point convention}
+\label{sec:adcfix}
+The AD5941's signed ADC codes are offset-binary around midscale: raw code
+$0{\times}8000$ ($32768$) represents \SI{0}{\volt} differential, not raw
+code $0{\times}0000$. The pre-existing conversion cast the raw code
+directly to \texttt{int16\_t}, which places the zero crossing at
+$0{\times}0000$ instead of the chip's actual midscale. Because the true
+signal sits near the real midscale, this cast turned small, physically
+sensible signals into large, discontinuous, non-physical swings whenever
+the raw code crossed the $0{\times}8000$ boundary -- a complete,
+self-sufficient explanation for the previously-reported ``flat, noisy''
+behavior, independent of Defect 1. The fix computes the signed signal as
+$(\mathrm{int32\_t})\,\mathrm{rawCode} - 32768$ and recovers current as
+\begin{equation}
+I = \frac{\mathrm{rawCode} - 32768}{32768}\cdot\frac{V_{\mathrm{ref}}}{\mathrm{PGA}\cdot\Rtia},
+\label{eq:current}
+\end{equation}
+with $V_{\mathrm{ref}}=\SI{1.82}{\volt}$, matching the AD5941's documented
+ADC code convention and Analog Devices' own
+\texttt{AppCHRONOAMPCalcCurrent()} reference
+implementation~\cite{ad5940_examples_github}.
+
+\subsection{Ancillary timing-budget correction}
+A third, smaller defect shared the same discovery path: the polling
+timeout guarding the SINC2 ``data ready'' flag ($1000\times\SI{10}{\micro\second}=\SI{10}{\milli\second}$)
+was shorter than the $\approx\SI{13.3}{\milli\second}$ the configured
+decimation chain (SINC2 OSR\,=\,1333, SINC3 OSR\,=\,4) requires to produce
+one genuinely fresh sample, computed via the AD5940 driver's own
+\texttt{AD5940\_ClksCalculate()}. Conversions were very likely timing out
+before observing a fresh result. The timeout budget was raised to
+$2500\times\SI{10}{\micro\second}=\SI{25}{\milli\second}$, with comfortable
+margin above the calculated minimum, and each measurement now performs a
+full ADC power-cycle around the conversion matching Analog Devices' own
+sequence, rather than a fixed, empirically-guessed delay.
+
+\subsection{Dummy-cell validation protocol}
+\label{sec:protocol}
+Both defects were corrected and then checked against the same traceable
+dummy-cell protocol used by the two companion
+manuscripts~\cite{clement2026linearity,clement2026architecture}: a Randles
+network ($R_s=\SI{560}{\ohm}$, $R_{ct}=\SI{10}{\kilo\ohm}$,
+$C_{dl}=\SI{33}{\nano\farad}$) connected across the WE/RE/CE terminals in
+place of an electrochemical cell, with the instrument's native ASCII
+command protocol driven from a Python (\texttt{pyserial}) script rather
+than the graphical client. This paper does not repeat that data collection;
+Section~\ref{sec:validation} reports the outcome already measured on the
+same firmware in those two manuscripts, which is the correct basis for
+confirming this paper's fix is retained on the firmware both of them
+validate, rather than re-measuring the same instrument a third time.

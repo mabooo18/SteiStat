@@ -1,0 +1,160 @@
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Why linearity cannot substitute for accuracy}
+\label{sec:why}
+
+The experiment of Section~\ref{sec:trap} is a direct demonstration of an
+algebraic fact. Write the reported current as $I_{\mathrm{rep}} = k\,
+I_{\mathrm{true}} + c$ for an unknown gain $k$ and offset $c$. Against a
+resistive reference $I_{\mathrm{true}} = E/R$, so
+$I_{\mathrm{rep}} = (k/R)E + c$. The coefficient of determination of a
+least-squares straight-line fit is invariant under affine transformation of the
+dependent variable; therefore $R^2$ takes the same value for every $k \neq 0$
+and every $c$. A linearity check tests whether the instrument's response is
+\emph{proportional} to the stimulus. It says nothing whatever about the
+constant of proportionality, which is precisely the calibration.
+
+This is not a subtle point once stated, yet the inference "$R^2 = 0.9999$,
+therefore the instrument measures correctly" recurs throughout the low-cost
+potentiostat literature and in this instrument's own prior documentation. The
+inference is attractive because the premise is genuinely informative---a poor
+$R^2$ really would indicate a defective analog chain---and because the failure
+mode it misses produces output that looks entirely healthy. In our measurements
+the $424\,\%$-in-error condition produced smooth, symmetric, low-noise
+voltammograms with a residual structure indistinguishable from the corrected
+condition. There is no visual cue.
+
+The practical consequence is that a validation claim built on linearity alone
+bounds nothing about absolute current. Any quantity derived from absolute
+current---electrode area, rate constants, concentrations, limits of
+detection---inherits the unbounded gain error in full. For a comparative or
+ratiometric measurement, where a calibration curve is built on the same
+instrument and the gain divides out, the error is benign; this distinction is
+worth stating explicitly in any report that relies on a linearity check.
+
+\subsection{A defect taxonomy for low-cost instruments}
+\label{sec:taxonomy}
+
+The defects in Table~\ref{tab:defects} fall into three groups that call for
+different countermeasures.
+
+\emph{Traceability defects} (D1--D3) are mismatches between a software constant
+and a hardware fact, or breaks in the path by which a constant reaches the code
+that uses it. They are individually trivial and collectively the most dangerous
+class, because they alter scale without altering shape. Notably, D1 alone would
+have been correctable had D2 not made the calibration resistor unsettable at
+run time, and D3 would have masked the correction for the remainder of a
+session even so: three independently minor faults compounded into an error that
+could not be diagnosed or worked around from the host. The countermeasure is
+not more testing but \emph{observability}---an instrument should report the
+calibration constants actually in force, which is why check V1 requires
+$\hat{R}_{\mathrm{TIA}}$ to be emitted rather than assumed. Adding that one line
+of output converted an invisible defect into an obvious one.
+
+\emph{Signal-path and convention defects} (D5--D8) are errors in how the front
+end is configured or how its output is interpreted: a programmable-gain enum
+read as a gain value, a switch that shunts the measurand, an inverted sign
+convention, a power state never established. These are detectable by
+differential testing against a known-good path---every one of them was found by
+diffing the failing classes against the working sequencer-driven CV engine and
+against the vendor reference examples---but not by any end-to-end statistic.
+
+\emph{Robustness defects} (D4) do not corrupt data; they destroy availability.
+An unbounded wait on a hardware flag is a single point of failure for the whole
+instrument, and it is worth noting that the bounded version we substituted did
+not \emph{fix} the impedance path---it converted an indefinite hang into a
+reported, diagnosable failure in \SI{50}{\second}. That is the more important
+property.
+
+Cutting across all three is an architectural amplifier. The three direct-current
+method classes contain verbatim-duplicated configuration and conversion code, so
+each of D5--D8 existed in triplicate and had to be corrected three times, and a
+fourth, unreachable copy persists in a legacy free-function module. A single
+shared conversion and configuration component---the obvious refactoring, and one
+this firmware has not yet taken---would have made each defect a single-site fix
+and each correction automatically consistent across methods.
+
+\subsection{Per-method validation is not optional}
+\label{sec:permethod}
+
+The coverage audit in Section~\ref{sec:coverage} is, we think, the most
+transferable result after the linearity argument. On one board, with one cell,
+in one session, cyclic voltammetry recovers the reference resistance to better
+than half a percent with a replicate spread of order $0.01\,\%$, while
+chronoamperometry, square-wave and differential pulse voltammetry on the same
+low-power loop and the same electrodes return no cell current at all, and
+impedance spectroscopy fails to complete a single frequency point. The methods
+differ only in firmware.
+
+It follows that an instrument-level validation claim is not meaningful. A
+statement of the form "the instrument was validated against a dummy cell"
+should be read as a claim about the one method that was exercised. Where several
+methods are implemented---and integrated front ends make implementing many
+methods nearly free---each needs its own evidence, and a method that has not
+been exercised should be listed as such. We have followed that rule in
+Table~\ref{tab:coverage} and in the abstract.
+
+\subsection{Interpretation of the residual error}
+\label{sec:residual}
+
+After correction the recovered resistance remains systematically high by
+approximately $0.4\,\%$. The component tolerance stack does not account for
+this: with $R_{ct}$ specified at $0.1\,\%$ and $R_s$ at a nominal $1\,\%$, the
+cell's own uncertainty is about $\pm0.11\,\%$ of $R_{\mathrm{DC}}$. The
+remaining $\sim\!0.3\,\%$ is an instrument effect, and the dominant candidate is
+the calibration resistor itself: $\hat{R}_{\mathrm{TIA}}$ is proportional to the
+\emph{declared} $\Rcal$ by Eq.~(\ref{eq:rtiacal}), and the fitted
+\SI{200}{\ohm} part's own tolerance therefore enters the current scale directly
+and is not separable from it by any measurement made through that same path.
+Characterising the fitted $\Rcal$ against a traceable standard, which we did not
+do, would bound this term. Series resistance in the switch matrix and in the
+cell wiring adds to the measured value in the same direction and is likewise
+not separated here. We therefore report the $0.4\,\%$ as an upper bound on
+instrument accuracy under these conditions rather than attributing it.
+
+The stability of the calibration is worth separating from its accuracy. Across
+replicates the recovered $\hat{R}_{\mathrm{TIA}}$ varied by only a few parts in
+$10^{5}$, so the front end measures its own gain very reproducibly---it was
+simply being told to measure it against the wrong number. Reproducibility of
+this order is what makes the failure so durable: repeated measurements agree
+with each other beautifully, and all of them are wrong together.
+
+\subsection{Limitations}
+\label{sec:limitations}
+
+Several limits bound what may be concluded.
+
+\emph{One method is validated, not the instrument.} Only cyclic voltammetry is
+supported by quantitative evidence. The remaining five implemented methods are
+reported as unvalidated, with three of them positively shown to be
+non-functional on this hardware.
+
+\emph{One passive operating point.} The reference is a single passive network of
+$\SI{10560}{\ohm}$ at direct current, exercised over $\pm\SI{600}{\milli\volt}$ at
+currents up to a few tens of microamperes, with the transimpedance stage at one
+nominal setting. Accuracy at other current decades, at other transimpedance
+settings, and against faradaic or diffusion-limited responses is not
+established. In particular the validated span does not exercise the low-current
+range where a biosensing measurement would typically operate.
+
+\emph{The capacitive term was not recovered.} The Randles capacitance predicts a
+branch separation of $2\nu C_{\mathrm{eff}}$, which at the highest scan rate
+available here remains below the current quantisation step
+(Section~\ref{sec:cap}). The cyclic-voltammetry path therefore constrains only
+the resistive part of the reference cell, and the protocol's V2 check is a
+direct-current check. Recovering $C_{dl}$ would require either a faster ramp
+than the firmware's step timing allows or a working impedance path.
+
+\emph{One board, one cell, one operator, one session.} Board-to-board
+reproducibility, long-term drift, and environmental sensitivity are not
+assessed; the measurement environment was neither controlled nor recorded.
+Replicates were acquired consecutively, so temporal drift is not separable from
+instrument noise.
+
+\emph{Traceability is to nominal values, not to a standard.} The reference is
+the manufacturer's nominal component values and their stated tolerances. No
+component was measured against a calibrated instrument, so the entire accuracy
+chain rests on those tolerances being honest. This is a deliberate trade---the
+protocol is designed to need no reference instrument---but it caps achievable
+accuracy at the component tolerance, here of order $0.1\,\%$.

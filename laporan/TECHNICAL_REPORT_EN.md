@@ -277,6 +277,34 @@ The modular refactoring of the HunStat2 firmware has successfully separated conc
 3. **Firmware Hardening**: Add watchdog timer resets in the main loop to recover from communication hangs during long OCP monitoring sessions.
 4. **Remove dead code**: Delete `src/command_processing/` and the free-function half of `electrochemical_methods.cpp` (§5's directory note, §7.5/§7.6) — they cannot be reached at runtime and only risk being edited by mistake.
 5. **Fix the status LED**: `Interface_SetLed()` currently ignores its color argument and always shows white (architecture document §6) — every call site already passes the semantically-correct color, so the fix is isolated to one function.
+6. **Add a working-electrode channel selector**: `C_CA`/`C_SWV`/`C_DPV`'s `ConfigDCMeasurement()` all hardcode `SWN_SE0` — there is no way to select which physical WE pin a measurement senses. This blocked conclusive dummy-cell verification of CA/SWV in §11.2 below; confirming/adding channel selection is the natural next step before trusting those two methods on real samples.
+7. **Unit-label every parameter field in the Python UI**: §11.3.1's CV bug was a silent volts-vs-millivolts mismatch between the UI and firmware. The CA/SWV/DPV panels already avoid this; a quick pass over EIS/OCP for the same class of issue is cheap insurance against a repeat.
+
+---
+
+## 11. Update Log — Sketch Restructuring, Dummy-Cell Verification, and Python UI Fixes (2026-08-01)
+
+This session began with a new project location, `Software/update 2 (18 Juli 26)/AD5941_25/`, that failed to compile out of the box, and ended with two confirmed-and-fixed bugs in the Python test UI after a live dummy-cell verification run. Full narrative, root-cause derivations, and a before/after table are in the standalone `UPDATE_2026-08-01.md` in this same folder; this section summarizes the parts most relevant to the technical report's existing structure.
+
+### 11.1. Compile-Time Fixes (New Sketch Location)
+* **`HunStat2.ino`'s relative includes were stale.** The file moved from one level below `src/` to sitting directly beside it, but its `#include "../src/..."` lines still carried the old `../` prefix, producing `fatal error: ../src/setup/ad5941_setup.h: No such file or directory`. Fixed by dropping the `../` prefix on all 8 local includes — see `UPDATE_2026-08-01.md` §1.1.
+* **`HunStat2.ino` and `AD5941_25.ino` cannot share a sketch folder.** They are two independent, complete firmware images with ~20 identically-named top-level functions, including `setup()`/`loop()` — not complementary files. `HunStat2.ino` was relocated to its own sibling sketch folder (`Software/update 2 (18 Juli 26)/HunStat2/`). See `UPDATE_2026-08-01.md` §1.2.
+
+### 11.2. Dummy-Cell Verification Findings
+A live run against a 3-branch dummy test cell (diode-nonlinear branch, plain-resistor branch, RC branch — see `UPDATE_2026-08-01.md` §2 for the full schematic breakdown) produced flat/noisy CA and SWV traces with no discernible decay or peak. Two explanations were identified, neither of which is a firmware defect requiring a fix:
+* CA's flat trace is **expected** on the RC branch: its ≈330 µs time constant is roughly 150× faster than a typical 20 Hz CA sample interval, so no decay curve can be visible at that sample rate on that branch regardless of firmware correctness.
+* The lack of any peak in SWV/CA may mean **the wrong branch is being sensed**: `ConfigDCMeasurement()` in `C_CA`/`C_SWV`/`C_DPV` all hardcode `SWN_SE0` (§3.2) with no electrode-channel-selection mechanism anywhere in the firmware. If `SE0` isn't wired to the one branch capable of producing a peak (the diode branch), a flat/noisy result is the *correct* outcome of measuring the wrong node — this remains an open item (recommendation 6 above), not something fixed this session.
+
+### 11.3. Python UI Bugs Found and Fixed
+
+#### 11.3.1. CV Stuck at Exactly 2 Data Points (Unit Mismatch)
+Every CV run produced exactly 2 data points regardless of configured parameters. Root cause: `rampTest.cpp`'s step-count formula (`AppRAMPSeqInitGen()`, §5.2) is entirely millivolt-based (`DAC12BITVOLT_1LSB ≈ 0.537 mV`), but the Python UI's CV panel defaults to volt-scale values (`0.5`, `-0.22`, `0.002`, `0.8`) — unlike CA/SWV/DPV, whose fields are already millivolt-scale. Sending these unconverted gave the firmware a `0.72` "mV" swing instead of the intended `720 mV`, collapsing `StepNumber` to `⌊0.72 / 0.537 × 2⌋ = 2`. Confirmed present on the live code path (`communication.cpp`, not the dead `command_processing.cpp` copy — see §5.1's tokenizer note and architecture document §3.4). **Fixed**: the CV parameter builder now multiplies Start/Stop/Step/Scan by `1000.0` before transmission, and field labels now show `(V)`/`(V/s)` explicitly. Full derivation in `UPDATE_2026-08-01.md` §3.1.
+
+#### 11.3.2. DPV Plot Showed a Spurious Diagonal Line
+The DPV plot displayed a steep diagonal line unrelated to the actual sweep data. Root cause: the plotting function connects points in arrival order rather than sorted by x-value, and the UI never cleared previous-run data before starting a new run — so re-running DPV without manually clicking "Clear" first joined the previous run's last point to the new run's first point with a stray line. **Fixed**: a new `_clear_mode_data()` call now runs automatically before every method execution. Full derivation in `UPDATE_2026-08-01.md` §3.2.
+
+### 11.4. Verification
+`AD5941_25.ino` compiles and uploads successfully from the new folder location; `hunstat2_test_ui.py` passes `python -m py_compile` after both fixes. The corrected CV units have not yet been re-verified end-to-end against physical hardware — see `UPDATE_2026-08-01.md` §5.2 for that follow-up recommendation.
 
 ---
 

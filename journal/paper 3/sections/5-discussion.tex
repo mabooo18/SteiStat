@@ -1,0 +1,119 @@
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Two different kinds of bug}
+The two defects fixed in this paper are structurally different in kind,
+and that difference is itself instructive for anyone debugging a similar
+commercial-AFE instrument. The signal-path error (Section~\ref{sec:rootcause})
+is a configuration-level mistake -- using a real, working AD5941 capability
+(the HS loop) for the wrong purpose -- and was diagnosable by direct
+comparison against vendor reference code precisely because the correct
+configuration already existed, fully specified, in Analog Devices' own
+examples. The ADC zero-point error (Section~\ref{sec:adcfix}) is a
+numerical-convention bug that a comparison at the level of ``which loop is
+configured'' would not by itself have caught; it was only found by
+inspecting raw ADC codes alongside converted values and cross-checking the
+arithmetic against the vendor's own formula. Both defects were present
+despite this project's own OCP and legacy CV paths -- which use different,
+independently-correct conventions -- functioning normally throughout; this
+is a direct illustration of the risk that duplicated, per-method
+conversion logic carries, which the companion architecture manuscript's
+audit documents in full and partially
+repairs~\cite{clement2026architecture}: a shared, single-source-of-truth
+conversion function, used by all five electrochemical-method classes,
+would have prevented at least the second defect by construction.
+
+\subsection{What was a deliberate design choice, not a gap}
+\label{sec:deliberate}
+To be fair to this project's own architecture, several of
+Table~\ref{tab:summary}'s differences from the vendor reference are
+intentional and appropriate for this instrument's actual use case -- a
+host-GUI-driven, live-configurable bench instrument -- not oversights.
+Analog Devices' examples are meant to be recompiled per experiment,
+driving the AD5941 through its on-chip sequencer and a wakeup timer so the
+MCU and AFE can sleep between samples, which is a power-optimized design
+appropriate for battery-powered, long-duration monitoring. This project
+instead runs a plain MCU-side polling loop and exposes CA/SWV/DPV
+parameters through the existing ASCII serial protocol, so a user (or the
+host GUI) can change them live without reflashing -- a genuine usability
+advantage for a benchtop instrument where power is not constrained and
+simplicity of the MCU-side control flow matters more than microsecond-level
+timing precision or battery life. Collapsing the vendor's two-parameter
+\texttt{Vzero}/\texttt{SensorBias} model into one runtime-settable value
+plus one hardcoded constant (Section~\ref{sec:rootcause}) is the same kind
+of reasonable simplification, made at the cost of not being able to reach
+potentials that would require shifting \texttt{Vzero} itself without a
+firmware constant change.
+
+\subsection{Relationship to the companion manuscripts}
+This paper, the metrology manuscript~\cite{clement2026linearity}, and the
+architecture manuscript~\cite{clement2026architecture} report three
+different, non-overlapping risk axes for the same instrument, and the
+three failure modes do not predict one another. A constant
+transimpedance-gain calibration error is numerically well-behaved --
+$R^2=0.99999647$ on an Ohm's-law fit -- while being $424\,\%$ wrong in
+absolute terms~\cite{clement2026linearity}; that error would have been
+completely invisible to the diagnostic method used in this
+paper, which compares register configuration and conversion formulas, not
+calibration constants. Conversely, the software-architecture debt
+documented in~\cite{clement2026architecture} -- triplicated
+measurement-configuration code, two dead parallel subsystems -- did not,
+on its own, prevent any single measurement from being correct; it is a
+maintainability and future-defect risk, not a present-correctness one.
+This paper's defects sit in a third category: they made affected methods
+\emph{visibly, unmistakably} non-functional, which is easier to notice
+than either of the other two failure modes but not, on its own, easier to
+root-cause -- diagnosing it required a working reference implementation to
+compare against, not just closer reading of this project's own code.
+Reading the three papers together is the more complete picture: a
+commercial AFE does not make a low-cost instrument's firmware correct by
+construction, and different classes of firmware defect require different
+diagnostic methods to find.
+
+\subsection{Limitations}
+\begin{itemize}
+\item \textbf{RTIA not live-calibrated against $\Rcal$.} The AD5941 does
+  not assume its internal $\Rtia$; it measures it by exciting the
+  on-board calibration resistor, $\Rcal$ (Section~\ref{sec:components};
+  jumper-selectable \SI{200}{\ohm}/\SI{4.7}{\kilo\ohm}/\SI{10}{\kilo\ohm}
+  on this instrument), and taking the ratio of the two responses. Analog
+  Devices' reference performs this active calibration before each
+  configuration change; this project's \texttt{RawToCurrent()} instead
+  uses a fixed, datasheet/factory-trim-typical $\Rtia$ lookup table as if
+  it were exact (Table~\ref{tab:summary}), without ever exciting $\Rcal$
+  to check it. This does not affect the \emph{shape} of a current-voltage
+  curve, which is why the linearity results in this paper
+  and in~\cite{clement2026architecture} are unaffected by it, but it does
+  mean this paper's own signal-path/ADC-convention fix does not, by
+  itself, establish absolute current accuracy: if the value declared for
+  $\Rcal$ in firmware ever drifts from the resistor actually fitted to the
+  board, every reported current is wrong by the same ratio, silently and
+  invisibly to a linearity check. That is precisely the gap the companion
+  metrology manuscript's traceable dummy-cell protocol
+  closes~\cite{clement2026linearity}, including one such $\Rcal$
+  mis-declaration it found and corrected on this same instrument.
+\item \textbf{Sample timing precision.} This project's \texttt{delay()}-based
+  sample interval is the requested period plus however long the
+  measurement itself took, not the vendor's hardware-guaranteed exact
+  output data rate; at low sample rates the discrepancy is proportionally
+  larger. This is a real, unresolved accuracy gap for any figure that
+  reports a precise timebase, and it is unrelated to, and not fixed by,
+  the two corrections reported in this paper.
+\item \textbf{No on-chip sequencer.} The AD5941's dedicated fast
+  single-shot transient sequence, meant for exactly the kind of fast
+  capacitive decay a chronoamperometry step produces, is not used by this
+  project's polling-loop architecture (Section~\ref{sec:deliberate}); a
+  future revision adopting it would trade implementation complexity for
+  finer time resolution and lower power.
+\item \textbf{DPV validated empirically only.} As detailed in
+  Section~\ref{sec:dpv-no-ref}, no vendor reference example exists for
+  DPV, so its fix rests on the same LP-loop pattern confirmed for CA and
+  SWV plus real hardware validation, not an independent reference
+  comparison.
+\item \textbf{EIS and OCP out of scope.} This paper's diagnosis and fix
+  are scoped to the three affected classes, CA/SWV/DPV. EIS already used
+  the HS loop correctly for its AC-excitation requirement and was not
+  re-examined here; OCP uses its own, independently-correct code path
+  that neither defect touches. Neither method's validated status on this
+  firmware is claimed in this paper.
+\end{itemize}

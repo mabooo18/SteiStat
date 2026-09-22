@@ -1,0 +1,158 @@
+\section{Results}
+\label{sec:results}
+
+\subsection{Audit findings}
+A repository-wide search for \texttt{virtual}, \texttt{: public}, and
+\texttt{template<} returned zero matches in project code, confirming no
+inheritance, polymorphism, or generic code existed anywhere in the
+pre-refactor firmware. Five of eleven source modules under
+\texttt{AD5941\_25/src/} used \texttt{class} only as a grouping syntax
+indistinguishable from a namespace, with all data members public. Two
+modules were, on call-site tracing, entirely unreachable at runtime:
+\texttt{command\_processing.cpp/.h} (a free-function command parser,
+extending past line 700 of grammar-handling code alone) and
+\texttt{electrochemical\_methods.cpp/.h} (a free-function reimplementation
+of CA/SWV/DPV bound to its own separate global-variable set, several hundred
+additional lines). Both duplicated functionality that a class-based
+implementation already provided on the live path
+(\texttt{C\_Communication} and \texttt{C\_CA}/\texttt{C\_DPV}/\texttt{C\_SWV}
+respectively) against a disjoint set of global state -- a correctness hazard
+as well as a maintenance one, since the two copies could silently diverge on
+a nominally shared parameter. The AFE configuration/sampling/conversion
+routine (\texttt{ConfigDCMeasurement}, \texttt{MeasureCurrentRaw},
+\texttt{RawToCurrent}) was found byte-for-byte identical, modulo
+class-qualification and comments, across \texttt{C\_CA}, \texttt{C\_DPV},
+and \texttt{C\_SWV} by direct line-level diff. \texttt{Interface\_SetLed()}
+was confirmed, by inspection, to ignore its \texttt{color} argument
+unconditionally.
+
+\subsection{Refactor outcome}
+Table~\ref{tab:refactor} summarizes the change. The shared-base-class
+extraction removed two of the three duplicate copies of the
+$\sim$200-line AFE routine, leaving one. Dead-code removal deleted
+\texttt{command\_processing.cpp/.h} and
+\texttt{electrochemical\_methods.cpp/.h} in full. The refactored firmware
+compiles cleanly against the same toolchain and board target
+(\texttt{rp2040:\allowbreak rp2040:\allowbreak seeed\_\allowbreak
+xiao\_\allowbreak rp2040}) with \textbf{960 fewer bytes}
+of compiled flash (124\,360 vs.\ 125\,320 bytes; RAM usage unchanged at
+170\,748 bytes, as expected since no data layout changed).
+
+\begin{table}[h]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\caption{Refactor summary.}
+\label{tab:refactor}
+\begin{tabular}{@{}p{4.3cm}p{1.7cm}p{1.9cm}@{}}
+\toprule
+Change & Before & After \\
+\midrule
+Copies of AFE config/sample/convert routine & 3 (verbatim) & 1 (shared base class) \\
+Dead free-function modules (command parser, electrochemical methods) & 2 & 0 \\
+Status-LED color argument & Ignored (always white) & Honored (10-color table) \\
+Compiled flash size & 125\,320 B & 124\,360 B ($-960$ B) \\
+Compiled RAM usage & 170\,748 B & 170\,748 B (unchanged) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Why the dummy-cell traces are straight, not peaked}
+Before presenting the four-method comparison, one visual point needs stating
+explicitly because it looks, at first glance, like an artifact: the CV
+trace in Figure~\ref{fig:before-after} is a straight line with no
+oxidation/reduction peaks -- not the peaked, hysteretic ``duck'' shape a
+cyclic voltammogram of a redox-active analyte (e.g.\ ferro/ferricyanide)
+shows. This is the expected, physically correct result, not a
+measurement or plotting error, and it is not specific to this instrument:
+it is a property of the dummy cell, established independently of any
+potentiostat. A Randles dummy cell and a plain resistor are passive
+$R$/$RC$ networks with no Faradaic reaction; peaks in a CV trace arise
+specifically from the potential-dependent rate of an electron-transfer
+reaction, which a dummy cell does not contain by construction. Wong and
+Zhou's direct theoretical treatment of CV on resistor/capacitor equivalent
+circuits derives exactly this result -- a passive $R$/$RC$ network under a
+linear potential sweep produces a current that is a linear (resistive
+branch) or elliptical/parallelogram-like (capacitive branch) function of
+the applied potential, structurally incapable of the peaked, asymmetric
+shape a Faradaic reaction produces~\cite{wong2024cyclic}. Commercial dummy
+cells are built, and documented, on the same premise: manufacturer
+reference cells are explicitly specified to give a predictable, calculable
+$R$/$RC$ response rather than a redox-like one, precisely so that the
+instrument, not the analyte, is what is under test~\cite{gamry2011universal},
+and independent round-robin characterization of dummy cells for
+electrochemical instrumentation reports the same linear/predictable
+behavior as the reference case against which instrument error is
+measured~\cite{kasper2022electrochemical}. What a dummy cell can and should
+show is a closed loop traced twice, once on the forward (increasing
+potential) leg and once on the reverse leg, and the two panels below plot
+both legs explicitly (solid vs.\ dotted/dash-dot) rather than as a single
+merged trace. They overlap almost exactly, which is itself informative: it
+means the RC time constant of both loads ($R_{ct}C_{dl}\approx
+\SI{330}{\micro\second}$ for the Randles cell) is fast relative to the
+\SI{100}{\milli\volt\per\second} scan rate used here, so hysteresis from
+capacitive charging current is below the trace width at this scan rate --
+consistent with, not contradicted by, the dummy cell's known $R$/$RC$
+composition.
+
+\subsection{Hardware validation: refactor vs.\ pre-refactor firmware}
+Figure~\ref{fig:before-after} overlays all four methods against the Randles
+dummy cell for the pre-refactor and post-refactor firmware. For CV
+($n=305$ points, \SI{-200}{\milli\volt} to \SI{600}{\milli\volt},
+\SI{5}{\milli\volt} step, both forward and reverse legs shown), the mean
+relative difference between firmware versions is $\mathbf{0.070\,\%}$ and
+the maximum is $\mathbf{2.83\,\%}$ (restricting to $|I|>1$ to avoid
+division blow-up at the zero crossing; the maximum occurs only immediately
+adjacent to that crossing). CA shows both firmware versions settling to the
+same quantized current level ($\approx -2.95\,\mu$A) with sample-to-sample
+jitter of about one ADC code in either direction -- the step response of a
+near-resistive load settles within one sample period, so what is visible is
+quantization noise, not a decay curve, and it is statistically
+indistinguishable between firmware versions. SWV shows a sharp initial
+point at the first step (a known transient at sweep start, present
+identically in both versions) followed by both traces tracking each other
+within the method's noise floor. DPV shows a mild local maximum near
+\SI{20}{\milli\volt} in both firmware versions -- an artifact of the pulse
+sequencing at the first few steps, not a redox peak, and reproduced
+identically before and after the refactor. In no method does the
+post-refactor trace diverge from the pre-refactor trace by more than
+ordinary run-to-run noise.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\linewidth]{fig1_all_methods_before_after}
+\caption{All four methods against the Randles dummy cell, pre- vs.\
+post-refactor firmware, same physical instrument and load. CV shows both
+sweep legs explicitly (forward: solid/dashed; reverse: dotted/dash-dot).}
+\label{fig:before-after}
+\end{figure}
+
+\subsection{Corroboration on a second, independent load}
+Figure~\ref{fig:two-loads} compares the refactored firmware's response on
+the Randles dummy cell ($R_s+R_{ct}\approx\SI{10.56}{\kilo\ohm}$ effective
+DC resistance) against a plain $\SI{10}{\kilo\ohm}$ resistor substituted in
+its place, across all four methods. For CV, the two loads differ in
+nominal DC resistance by a factor of $10560/10000 = 1.056$; a linear
+regression of reported current against applied potential gives slopes of
+$0.09422$ (Randles) and $0.09986$ (resistor) current-units per mV, a ratio
+of $0.9435$ -- within $0.9\,\%$ of the $1/1.056 = 0.9470$ value Ohm's law
+predicts from the two loads' nominal resistance ratio alone. CA again
+settles to the same quantized level for both loads, as expected since both
+are within $6\,\%$ of each other in resistance and CA's fast RC settling
+makes it largely insensitive to that difference at this current range. SWV
+and DPV track each other in shape across both loads, with point-to-point
+differences of the same magnitude as the before/after comparison in
+Figure~\ref{fig:before-after}. This is not a precision calibration claim
+(that is the scope of the companion manuscript~\cite{clement2026linearity});
+it is a sanity check that the refactored firmware responds correctly, in
+the correct direction and roughly the correct magnitude, to a real load it
+was never exercised against during development of the refactor.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\linewidth]{fig2_all_methods_two_loads}
+\caption{Refactored firmware only: response to two independent real loads
+(Randles dummy cell vs.\ plain \SI{10}{\kilo\ohm} resistor), all four
+methods.}
+\label{fig:two-loads}
+\end{figure}

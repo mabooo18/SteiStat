@@ -39,3 +39,30 @@ obj/
 *.sln
 Thumbs.db
 .DS_Store
+
+# Redundant zip archives (an extracted copy already exists alongside each
+# of these; kept on disk for convenience but excluded from git to avoid
+# repo bloat)
+OneDrive_1_15-09-2026.zip
+journal/paper 2 (2).zip
+journal/paper 2 (3).zip
+journal/paper 2 (4).zip
+journal/paper 2 (5).zip
+journal/paper 2.zip
+journal/paper 3.zip
+journal/paper.zip
+Software/update 5 (15 Agustus 26)/ad5940-examples-master (1).zip
+Software/update 5 (15 Agustus 26)/ad5940lib-master.zip
+Software/update 5 (15 Agustus 26)/STEI_Bstat_v1.2.zip
+Software/update 6 (15 September 26)/ad5940-examples-master (1).zip
+Software/update 6 (15 September 26)/ad5940lib-master.zip
+Software/update 6 (15 September 26)/STEI_Bstat_v1.2.zip
+Software/update 7 (20 September 26)/ad5940-examples-master (1).zip
+Software/update 7 (20 September 26)/ad5940lib-master.zip
+Software/update 7 (20 September 26)/STEI_Bstat_v1.2.zip
+
+# Unmodified vendor example whose IDE project files exceed Windows' 260-char
+# MAX_PATH once nested under Software/update N (.../ad5940-examples-master/
+# ad5940-examples-master/examples/...); git cannot add these without
+# core.longpaths enabled.
+**/ad5940-examples-master/ad5940-examples-master/examples/AD5940_Impedance_Adjustable_with_frequency/

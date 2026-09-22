@@ -1,0 +1,42 @@
+\begin{abstract}
+Low-cost potentiostats are routinely validated against a resistive dummy cell by
+reporting the coefficient of determination of an Ohm's-law fit. We show that
+this evidence is structurally incapable of detecting a transimpedance gain
+error: a constant gain multiplies the fitted slope and leaves $R^{2}$ exactly
+unchanged. The point is not hypothetical. An AD5941/RP2040 potentiostat examined
+here recovered a resistance $424\,\%$ in error from cyclic voltammetry---its
+reported currents low by a factor of $5.22$---while fitting
+Ohm's law at $R^{2} = 0.99999647$ against a precision Randles cell
+($R_s = \SI{560}{\ohm}$, $R_{ct} = \SI{10}{\kilo\ohm}$, $C_{dl} = \SI{33}{\nano\farad}$).
+The cause was a single firmware constant declaring the value of an on-board
+calibration resistor as \SI{10}{\kilo\ohm} when the resistor fitted was
+\SI{200}{\ohm}; because the front end measures its own transimpedance gain
+against that declaration, the error entered every reported current
+multiplicatively. Deliberately sweeping the declared value moved the absolute
+error by a factor of $982$ while $R^{2}$ varied by $2.4\times10^{-6}$. The error
+also proved non-correctable after the fact, because the calibration excitation is
+itself sized from the declared value and saturates. We propose a five-check
+validation protocol---scale traceability, absolute accuracy against component
+nominals, residual structure referred to the current quantisation step,
+replicate precision, and invariance across acquisition settings---that requires
+no reference instrument. Applied after correcting eight firmware defects, it
+placed the instrument's cyclic voltammetry at $+0.428\,\%$ of the nominal
+\SI{10560}{\ohm} reference with a replicate relative standard deviation of
+$0.0152\,\%$, invariant to within $0.074$ percentage points across scan rates of
+\SIrange{25}{800}{\milli\volt\per\second}, potential limits to
+$\pm\SI{600}{\milli\volt}$ and steps of \SIrange{5}{20}{\milli\volt}, with fit
+residuals at $0.25$ of the quantisation step. We also report what the protocol
+shows about the instrument's five other implemented methods: chronoamperometry,
+square-wave and differential pulse voltammetry return no cell current,
+impedance spectroscopy completes no frequency point, and open-circuit potential
+saturates. One method of six is validated. The principal limitations are that
+traceability rests on component nominal values rather than on a calibrated
+standard, that a single passive operating point at a single transimpedance
+setting was exercised, and that the cell's capacitance lies below the
+instrument's current resolution and so was not recovered.
+\end{abstract}
+
+\begin{keyword}
+potentiostat \sep instrument validation \sep calibration traceability \sep
+cyclic voltammetry \sep AD5941 \sep dummy cell \sep open-source hardware
+\end{keyword}

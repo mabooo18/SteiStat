@@ -1,0 +1,23 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+Reviews of the AD5940-based low-cost potentiostat literature, including the
+most recent one, evaluate control software functionally and leave its
+architecture unexamined. We audited one such instrument's firmware, found
+concrete, fixable problems -- triplicated measurement-configuration code,
+two entirely dead parallel subsystems, and a silent status-indicator bug --
+and fixed them with a scoped, individually verifiable refactor. Reusing the
+dummy-cell validation protocol from a companion metrological study, we
+measured, rather than assumed, that the refactor left the instrument's
+CV, CA, SWV, and DPV output effectively unchanged (mean relative CV
+difference $0.070\,\%$), and corroborated the result on an independent real
+load. Because this instrument's analog front end is commercial,
+characterized silicon, the residual reliability risk in AD5940-based
+potentiostats is concentrated in firmware structure rather than analog
+design -- and that risk, this work shows, can be reduced with ordinary
+refactoring technique at effectively no cost to measurement correctness.
+We see this as a first, scoped demonstration of a broader point: for this
+growing instrument class, software architecture deserves the same
+deliberate scrutiny that these papers already give to transimpedance gain
+tables and calibration protocols, and doing so does not have to come at the
+expense of the numbers the instrument was built to report.

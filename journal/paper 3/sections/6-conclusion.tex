@@ -1,0 +1,45 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+This paper reported the design, firmware implementation, an honest
+object-oriented architecture audit, and a hardware-validated correctness
+fix for HunStat2, our own low-cost AD5941/RP2040 potentiostat. The audit
+found real but limited object orientation -- encapsulation in only two of
+eight classes, no inheritance or polymorphism anywhere in the codebase,
+and three method classes carrying verbatim-duplicated measurement-configuration
+code -- and showed that this duplication was not a cosmetic concern: a
+commercial electrochemical AFE removes most of the burden of getting a
+low-cost potentiostat's analog performance right, but firmware can still
+drive it into the wrong of its two excitation/sensing loops, or
+misinterpret the numeric convention of the code it returns, and produce
+output that compiles cleanly and runs without crashing while being
+physically wrong -- and when that firmware is triplicated, so is the bug.
+We diagnosed two such defects in HunStat2's chronoamperometry,
+square-wave voltammetry, and differential pulse voltammetry firmware -- an
+incorrect High-Speed-loop configuration where every Analog Devices
+DC-method reference example uses the Low-Power loop, and an incorrect ADC
+zero-point convention -- by direct, file-by-file comparison against the
+vendor's own reference examples, the most reliable diagnostic method
+available when the correct behavior is already fully specified in code the
+manufacturer publishes. Both defects, together with an undersized ADC
+polling-timeout budget sharing the same root cause, were corrected
+identically across all three affected classes, once per copy. The fix is
+carried forward into the same main firmware independently validated by
+two companion manuscripts: their data confirms CA, CV, SWV,
+and DPV all produce correctly-signed, signal-dependent, non-degenerate
+output, and the companion metrology manuscript's traceable accuracy check
+($R^2\geq0.999994$, $+0.428\,\%$ recovered-resistance error) is
+independent confirmation that the corrected signal chain is quantitatively
+correct, not merely internally consistent. We also mapped the remaining
+differences from the vendor reference into deliberate architectural
+choices appropriate to this instrument's live, host-driven use case, and
+genuine, unreconciled gaps -- RTIA live-calibration and sample-timing
+precision chief among them. This paper deliberately stops short of
+restructuring the duplication its own audit documents; that refactor, and
+its own hardware-measured proof that it leaves every method's output
+unchanged, is the companion architecture manuscript's
+contribution~\cite{clement2026architecture}. Read together with that
+manuscript and the companion metrology manuscript's traceability
+protocol~\cite{clement2026linearity}, this instrument family now has an
+accurate map of what is fixed, what is a considered trade-off, and what is
+still open.

@@ -1,0 +1,51 @@
+\begin{abstract}
+This paper reports the design, firmware implementation, object-oriented
+architecture audit, and dummy-cell performance evaluation of HunStat2, our
+own low-cost, open-hardware potentiostat built around the Analog Devices
+AD5940 electrochemical analog front end (AFE) and a Seeed Studio XIAO
+RP2040 microcontroller, built directly from the AD5940 datasheet, standard
+three-electrode potentiostat design practice, and the AD5940
+evaluation-kit reference firmware. The firmware is organized as a partial
+migration from a monolithic, procedural Arduino sketch toward a set of C++
+classes separating command processing, parameter storage, hardware
+configuration, and individual electrochemical methods (chronoamperometry,
+CA; cyclic voltammetry, CV; square-wave voltammetry, SWV; differential
+pulse voltammetry, DPV; electrochemical impedance spectroscopy, EIS; and
+open-circuit potential, OCP). We report an honest, evidence-based audit of
+this structure's object-oriented maturity: of eight classes, only two
+exhibit non-trivial encapsulation, no inheritance or polymorphism is used
+anywhere in the codebase, and three method classes contained
+verbatim-duplicated measurement-configuration code -- duplication we show
+was not a cosmetic concern, since a real correctness bug in that shared
+code had to be found and fixed three times over, once per copy. Direct,
+file-by-file comparison of the project's CA/SWV/DPV firmware against
+Analog Devices' own AD5940 reference examples identified exactly that bug,
+and a second, independent one, together explaining a previously-reported
+CA/SWV data-quality failure: (1) the affected classes configured the
+AD5940's High-Speed excitation/sensing loop, intended for AC/impedance
+excitation, where every vendor DC-method reference example instead
+configures the Low-Power loop; and (2) the analog-to-digital conversion
+routine used the wrong zero-point convention for the chip's offset-binary
+signed codes, turning small, physically sensible signals into large,
+discontinuous, non-physical values. Both defects were corrected
+identically across all three classes and are carried forward into the same
+firmware baseline independently validated on a traceable dummy cell by two
+companion manuscripts: that data confirms CV, CA, SWV,
+and DPV all produce correctly-signed, signal-dependent, non-degenerate
+output, and the companion metrology manuscript's cyclic-voltammetry
+accuracy check ($R^2\geq0.999994$, $+0.428\,\%$ recovered-resistance error
+against a traceable Randles dummy cell) is independent confirmation that
+the corrected signal chain is quantitatively correct, not merely
+self-consistent. This paper positions its contribution around a diagnosed,
+evidence-based hardware-and-software architecture assessment together with
+a working, hardware-validated measurement chain, rather than an
+unsubstantiated claim of a fully mature object-oriented design; the
+structural refactor that the audit motivates is reported and separately
+validated in a companion manuscript built specifically around it.
+\end{abstract}
+
+\begin{keyword}
+Potentiostat \sep AD5940 \sep object-oriented design \sep embedded systems
+\sep electrochemical instrumentation \sep firmware debugging \sep
+reference-code comparison \sep dummy cell \sep open-source hardware
+\end{keyword}

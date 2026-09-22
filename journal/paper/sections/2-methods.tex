@@ -1,0 +1,184 @@
+\section{Materials and methods}
+\label{sec:methods}
+
+\subsection{Instrument}
+\label{sec:instrument}
+
+The instrument under test is HunStat2, a single-channel three-electrode
+potentiostat built on the Analog Devices AD5941 electrochemical analog front end
+(AFE) and a Seeed Studio XIAO RP2040 microcontroller, on the
+\texttt{STEI\_Bstat\_v1.2} carrier board. The AD5941 integrates two independent
+excitation and sensing paths~\cite{devices2024ad5940}. The \emph{low-power} (LP)
+loop comprises a 12-bit $V_{\mathrm{bias}}$ and 6-bit $V_{\mathrm{zero}}$
+low-power DAC, a low-power potentiostat amplifier (LPPA) that drives the counter
+electrode in feedback with the reference electrode, and a low-power
+transimpedance amplifier (LPTIA) with a selectable internal feedback resistor
+$\Rtia$ that senses working-electrode current. The \emph{high-speed} (HS) loop
+provides sinusoidal excitation and a separate transimpedance stage for impedance
+spectroscopy. Direct-current and staircase methods use the LP loop.
+
+The board carries a bank of jumper-selectable calibration resistors
+($\Rcal$) of \SI{200}{\ohm}, \SI{4.7}{\kilo\ohm} and \SI{10}{\kilo\ohm}, plus one
+unpopulated position. These are not in the measurement signal path; they are the
+reference against which the AFE measures its own transimpedance gain. On the
+board used here, the \SI{200}{\ohm} position (\texttt{RCAL1}) is fitted.
+
+Firmware is C/C++ built with \texttt{arduino-cli} 1.2.0 against the
+\texttt{rp2040:rp2040} core 5.6.0, targeting
+\texttt{rp2040:rp2040:seeed\_xiao\_rp2040}. Cyclic voltammetry executes through a
+hardware-sequencer engine derived from the Analog Devices \texttt{AD5940\_Ramp}
+reference example; chronoamperometry (CA), square-wave voltammetry (SWV),
+differential pulse voltammetry (DPV), impedance spectroscopy (EIS) and
+open-circuit potential (OCP) are implemented as direct-register C++ classes. The
+host communicates over USB-CDC at \SI{1}{\mega\baud} with a compact ASCII command
+protocol. All measurements reported here were driven from a Python
+(\texttt{pyserial}) acquisition script rather than the graphical client, so that
+every sweep is recorded with the settings and the calibrated transimpedance
+value in effect at the time.
+
+\subsection{Reference cell}
+\label{sec:cell}
+
+A precision passive network was used rather than an electrochemical cell.
+Screen-printed electrodes vary between units and with reuse~\cite{anshori2025ganestat,
+finvsgar2018reusability}, so an electrode-based comparison confounds electrode
+variability with instrument performance; a passive network makes instrument
+behaviour the dominant source of variation~\cite{kasper2022electrochemical} and,
+critically for this work, has an absolute impedance known from component nominal
+values rather than from a second instrument.
+
+The external dummy cell exposes three branches from a shared counter/reference
+node. The branch used throughout is \textbf{we-C}, a Randles topology
+$R_s + (R_{ct} \parallel C_{dl})$ with
+$R_s = \SI{560}{\ohm}$,
+$R_{ct} = \SI{10}{\kilo\ohm}$ (\SI{0.1}{\percent} tolerance) and
+$C_{dl} = \SI{33}{\nano\farad}$
+(Fig.~\ref{fig:setup}). The remaining branches---a bare \SI{10}{\kilo\ohm}
+\SI{0.1}{\percent} resistor (we-B) and an anti-parallel BAS16 diode pair in
+parallel with \SI{33}{\nano\farad} in series with \SI{560}{\ohm}
+(we-A)---were not connected.
+
+For the direct-current methods considered here the relevant reference quantity
+is the zero-frequency resistance,
+\begin{equation}
+R_{\mathrm{DC}} = R_s + R_{ct} = \Rnom,
+\label{eq:rdc}
+\end{equation}
+whose uncertainty is dominated by $R_s$. Under a linear potential ramp of rate
+$\nu$ the same network has the closed-form steady-state response
+\begin{equation}
+I(t) = \frac{\nu t}{R_s + R_{ct}}
+     \;\pm\; \nu\,\frac{R_{ct}^{2} C_{dl}}{(R_s + R_{ct})^{2}},
+\label{eq:ramp}
+\end{equation}
+the sign of the second term following the sweep direction. The forward and
+reverse branches of a cyclic voltammogram are therefore predicted to be parallel
+straight lines of slope $1/R_{\mathrm{DC}}$, separated by
+$\Delta I = 2\nu C_{\mathrm{eff}}$ with
+$C_{\mathrm{eff}} = R_{ct}^{2}C_{dl}/(R_s+R_{ct})^{2} = \SI{29.6}{\nano\farad}$.
+Both the slope and the separation are thus predicted analytically from component
+values, with no free parameters and no reference instrument.
+
+\subsection{Where the current scale comes from}
+\label{sec:traceability}
+
+The quantity a potentiostat reports is not measured directly; it is the end of a
+chain. For the LP loop, the reported current is
+\begin{equation}
+I_{\mathrm{rep}}
+  = \frac{N_{\mathrm{ADC}}}{2^{15}}\cdot\frac{V_{\mathrm{ref}}}{G_{\mathrm{PGA}}\,\hat{R}_{\mathrm{TIA}}},
+\label{eq:current}
+\end{equation}
+where $N_{\mathrm{ADC}}$ is the offset-binary ADC code referred to midscale,
+$V_{\mathrm{ref}} = \SI{1.82}{\volt}$, $G_{\mathrm{PGA}}$ the programmable-gain
+setting, and $\hat{R}_{\mathrm{TIA}}$ the \emph{measured} transimpedance gain.
+The AD5941 does not assume its internal $\Rtia$; it measures it, by exciting a
+known resistor and taking a ratio,
+\begin{equation}
+\hat{R}_{\mathrm{TIA}}
+  = R_{\mathrm{CAL}}^{\,\mathrm{decl}}\cdot
+    \frac{\mathrm{DFT}_{\mathrm{TIA}}}{\mathrm{DFT}_{\mathrm{CAL}}},
+\label{eq:rtiacal}
+\end{equation}
+in which $R_{\mathrm{CAL}}^{\,\mathrm{decl}}$ is a \emph{software constant}
+declaring the value of the physically fitted resistor. Combining
+(\ref{eq:current}) and (\ref{eq:rtiacal}), if the declared value differs from the
+fitted value by a factor $\gamma = R_{\mathrm{CAL}}^{\,\mathrm{decl}} /
+R_{\mathrm{CAL}}^{\,\mathrm{fitted}}$, every reported current is scaled by
+$1/\gamma$. This is the gain error $k$ of Section~\ref{sec:intro}: a single
+mis-declared constant, entering multiplicatively, invisible to linearity.
+
+A second-order consequence matters in practice. The excitation amplitude used
+for the calibration in (\ref{eq:rtiacal}) is itself sized from the declared
+value, as $V_{\mathrm{exc}} \approx 2000\times0.8\times
+R_{\mathrm{CAL}}^{\,\mathrm{decl}}/\Rtia$~mV$_{pp}$. Over-declaring $\Rcal$
+therefore also over-drives the calibration, and once the transimpedance output
+saturates the ratio in (\ref{eq:rtiacal}) is no longer $\gamma$-proportional.
+The resulting gain error is then neither predictable nor correctable after the
+fact---it must be prevented.
+
+\subsection{Validation protocol}
+\label{sec:protocol}
+
+We propose and apply the five checks below. They are ordered so that the checks
+that constrain absolute scale come first, and none requires a reference
+instrument. Acceptance windows were fixed before the measurements, adapting the
+$\pm\SI{2}{\percent}$ resistive tolerance used by a commercial verification-cell
+manual~\cite{gamry2011universal}.
+
+\begin{description}
+\item[V1 --- Scale traceability.] Confirm that every software constant that
+  enters the gain chain matches the hardware actually fitted, and require the
+  instrument to \emph{report} its calibrated $\hat{R}_{\mathrm{TIA}}$ so the
+  scale is observable rather than assumed. Pass: declared $\Rcal$ equals the
+  fitted resistor, and $\hat{R}_{\mathrm{TIA}}$ lies within the manufacturer's
+  stated spread of its nominal setting.
+\item[V2 --- Absolute accuracy.] Fit $I$ against $E$ and compare the recovered
+  resistance $R = (\mathrm{d}I/\mathrm{d}E)^{-1}$ against the nominal value of
+  Eq.~(\ref{eq:rdc}). Pass: $|R - R_{\mathrm{DC}}|/R_{\mathrm{DC}} \le
+  \SI{2}{\percent}$. This is the check that linearity cannot substitute for.
+\item[V3 --- Residual structure.] Report $R^2$ \emph{and} the root-mean-square
+  fit residual expressed in units of the current least significant bit,
+  $\mathrm{LSB} = V_{\mathrm{ref}}/(2^{15}G_{\mathrm{PGA}}\hat{R}_{\mathrm{TIA}})$.
+  A residual at or below the quantisation floor indicates the fit is limited by
+  the converter rather than by the analog chain; structure above it indicates a
+  systematic defect that $R^2$ alone will under-report.
+\item[V4 --- Repeatability.] Acquire $n \ge 7$ replicate sweeps under identical
+  settings and report the relative standard deviation of the recovered
+  resistance. Pass: $\%\mathrm{RSD} \le \SI{0.5}{\percent}$.
+\item[V5 --- Parameter invariance.] Repeat across scan rate, potential window
+  and potential step. The recovered resistance is a property of the cell and
+  must not depend on the acquisition settings. Pass: the spread of $R$ across
+  each series is within the V2 window.
+\end{description}
+
+\subsection{Acquisition and analysis}
+\label{sec:analysis}
+
+Unless stated otherwise, cyclic voltammograms were acquired from
+$-200$ to $+\SI{200}{\milli\volt}$ in \SI{5}{\milli\volt} steps at
+\SI{200}{\milli\volt\per\second}, one cycle, with the LP transimpedance set to
+its \SI{1}{\kilo\ohm} nominal position. Ten replicates were recorded for the
+accuracy and repeatability analysis; three replicates at each setting for the
+$\Rcal$ mis-declaration series; and single sweeps across the scan-rate,
+window and step series.
+
+Each sweep was fitted by ordinary least squares over all points of both
+branches. Recovered resistance is the reciprocal of the fitted slope, converted
+to ohms. Loop separation was evaluated by interpolating forward and reverse
+branches onto a common potential grid over their overlapping span and taking the
+mean difference. Analysis used NumPy 2.3.4 on Python 3.13. Raw sweeps, the
+acquisition scripts and the analysis that generates every figure and table are
+in the project repository.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.92\linewidth]{fig1_setup}
+\caption{Measurement chain and reference cell. (a) The instrument: AD5941 AFE
+with its low-power loop (LPDAC, LPPA, LPTIA) driving the cell, and the
+jumper-selected $\Rcal$ network used to calibrate the transimpedance gain ---
+note that $\Rcal$ sits outside the measurement path but sets the scale of every
+reported current through Eq.~(\ref{eq:rtiacal}). (b) The we-C Randles branch of
+the external dummy cell used as the traceable reference.}
+\label{fig:setup}
+\end{figure}

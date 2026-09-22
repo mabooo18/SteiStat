@@ -1,0 +1,113 @@
+\section{Results}
+\label{sec:results}
+
+\subsection{Comparison outcome: deliberate differences vs.\ genuine gaps}
+\label{sec:comparison-outcome}
+Beyond the two defects of Section~\ref{sec:methods}, the file-by-file
+comparison against Analog Devices' reference examples surfaced several
+other differences. Table~\ref{tab:summary} classifies each: matched
+(now identical in substance), a deliberate choice appropriate to this
+instrument's live, host-driven use case
+(Section~\ref{sec:deliberate}), or a genuine, unreconciled gap.
+
+\begin{table}[h]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\caption{This project's CA/SWV/DPV firmware vs.\ Analog Devices' reference
+examples, post-fix.}
+\label{tab:summary}
+\begin{tabular}{@{}p{2.7cm}p{2.5cm}p{2.7cm}@{}}
+\toprule
+Aspect & Vendor reference & This project (post-fix) \\
+\midrule
+Excitation/sensing loop & LP loop & LP loop -- \textbf{matched} (Sec.~\ref{sec:rootcause}) \\
+Applied-potential formula & Eqs.~\eqref{eq:vzero}--\eqref{eq:vbias} & Identical -- \textbf{matched} \\
+ADC zero-point convention & $\mathrm{code}-32768$ & $\mathrm{code}-32768$ -- \textbf{matched} (Sec.~\ref{sec:adcfix}) \\
+Programming model & On-chip sequencer + wakeup timer, sleep between samples & MCU-side polling loop -- \textbf{deliberate} \\
+Parameter configurability & Compile-time struct & Runtime ASCII commands -- \textbf{deliberate}, project advantage \\
+RTIA value (against $\Rcal$) & Live-calibrated per session, by exciting $\Rcal$ & Fixed nominal table, $\Rcal$ never excited to check it -- \textbf{gap}, addressed in~\cite{clement2026linearity} \\
+Sample timing precision & Hardware-timed exact ODR & Software \texttt{delay()}, approximate -- \textbf{gap} \\
+Fast-transient capture & Dedicated single-shot sequence & Not available -- \textbf{gap} \\
+DPV reference available & No dedicated example in vendor set & Fixed by extrapolation from CA/SWV -- \textbf{validated empirically, not by reference} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Validation on the main firmware}
+\label{sec:validation}
+Rather than re-collect a third round of dummy-cell data on the same
+physical instrument, this paper draws on the already-published,
+independently-collected data of the two companion
+manuscripts~\cite{clement2026linearity,clement2026architecture}, both of
+which validate the same main firmware that carries the
+Section~\ref{sec:methods} fixes forward. This is the correct basis for
+confirming the fix is retained on the firmware this paper's readers would
+actually use, and it avoids the risk of a third, independently-collected
+dataset drifting from the other two by ordinary measurement noise alone.
+
+Figure~\ref{fig:before-after} (reproduced from~\cite{clement2026architecture})
+shows all four DC/staircase methods -- CV, CA, SWV, and DPV -- run against
+the Randles dummy cell of Section~\ref{sec:protocol} on this baseline.
+Every method produces correctly-signed, non-degenerate, signal-dependent
+output: CV shows a linear current-voltage relationship across the full
+sweep; CA settles to a stable, quantization-limited current level after
+each step; SWV and DPV both track the applied potential within the
+method's own noise floor. This is the direct, positive evidence that the
+``flat, noisy, no discernible decay or peak'' failure mode motivating this
+paper (Section~\ref{sec:diagmethod}) does not recur on the corrected
+firmware.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\linewidth]{fig1_all_methods_before_after}
+\caption{All four DC/staircase methods against the Randles dummy cell on
+the main firmware, reproduced
+from~\cite{clement2026architecture}. Every method shows correctly-signed,
+signal-dependent output -- the direct opposite of the flat, noisy failure
+this paper's fix addresses.}
+\label{fig:before-after}
+\end{figure}
+
+Figure~\ref{fig:two-loads} (reproduced from~\cite{clement2026architecture})
+corroborates this on a second, independent real load -- a plain
+\SI{10}{\kilo\ohm} resistor substituted for the Randles cell -- confirming
+the corrected signal chain responds correctly, in the right direction and
+approximately the right magnitude, to a load it was not implicitly tuned
+against.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\linewidth]{fig2_all_methods_two_loads}
+\caption{Refactored firmware's response to two independent real loads --
+the Randles dummy cell and a plain \SI{10}{\kilo\ohm} resistor -- across
+all four methods, reproduced from~\cite{clement2026architecture}.}
+\label{fig:two-loads}
+\end{figure}
+
+The companion metrology manuscript goes one step further for CV,
+anchoring the corrected signal chain against a traceable, independently
+known resistance rather than only checking internal consistency: 10
+replicate sweeps on the same Randles cell recover
+$R=\SI{10605.2\pm1.6}{\ohm}$ against a \SI{10560}{\ohm} nominal value
+($+0.428\,\%$ error), with repeatability $\%\mathrm{RSD}=0.0152\,\%$ and
+$R^2\geq0.999994$ held across scan rate, potential window, and step-size
+variation~\cite{clement2026linearity}. Because a constant multiplicative
+error in $\Rtia$ would not change the \emph{shape} of a current-voltage
+curve, this accuracy check is not something Section~\ref{sec:rootcause}'s
+or Section~\ref{sec:adcfix}'s fixes could have produced by construction --
+it is independent confirmation that the corrected signal chain is
+quantitatively correct, not merely internally self-consistent.
+
+\subsection{DPV: validated empirically, not by reference}
+\label{sec:dpv-no-ref}
+Analog Devices' \texttt{ad5940-examples} repository, as available to this
+project, contains no dedicated differential-pulse-voltammetry
+example~\cite{ad5940_examples_github}. Consequently, unlike CA and SWV,
+\texttt{c\_dpv.cpp}'s fix was not checked against a vendor reference
+implementation the same way -- it was fixed by applying the
+now-confirmed-correct LP-loop pattern under the reasoning given in
+Section~\ref{sec:diagmethod}. Figure~\ref{fig:before-after}'s DPV panel is
+real evidence the fix works correctly on this hardware, but it should be
+read as validated \emph{empirically}, not \emph{by reference comparison},
+unlike CA and SWV.

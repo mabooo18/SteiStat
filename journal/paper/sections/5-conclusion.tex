@@ -1,0 +1,47 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+A low-cost AD5941/RP2040 potentiostat was found to recover a resistance
+$424\,\%$ in error from cyclic voltammetry---its reported currents low by a
+factor of $5.22$---while passing a resistive-dummy-cell linearity check at
+$R^{2} > 0.99999$. The cause was a single firmware constant declaring the
+value of an on-board calibration resistor that did not match the resistor
+fitted, compounded by a broken path from the user-facing command to the code
+that consumes it and by a calibration that ran once per power-up. Because a
+constant gain error enters the reported current multiplicatively, and because
+the coefficient of determination is invariant under affine rescaling of the
+measured variable, no linearity statistic could have detected it---and we
+verified experimentally that $R^{2}$ did not move measurably while the induced
+error was swept over more than two decades.
+
+We proposed a five-check validation protocol that places scale traceability
+first, compares recovered values against component nominals rather than against
+a fitted slope, reports fit residuals against the converter's quantisation step,
+and requires invariance across acquisition settings. It needs no reference
+instrument. Applied after correcting eight firmware defects, it placed the
+instrument's cyclic voltammetry at $(0.43 \pm 0.02)\,\%$ of the nominal
+\SI{10560}{\ohm} reference with a replicate relative standard deviation of
+$0.015\,\%$, invariant across scan rate, potential window and potential step.
+
+We also report what the same protocol shows about the instrument's other
+methods: chronoamperometry, square-wave and differential pulse voltammetry
+return no cell current on this hardware, and impedance spectroscopy does not
+complete a frequency point, although the correction of an unbounded wait now
+makes that failure fast and diagnosable rather than indefinite. One method is
+validated; five are not. That asymmetry, on a single board driven by a single
+front end, is the clearest argument we can offer that instrument-level
+validation claims should be replaced by per-method ones.
+
+Two recommendations generalise beyond this instrument. First, publish the
+calibration: an instrument that reports the gain constants actually in force
+turns an entire class of silent, scale-corrupting defects into visible ones, at
+the cost of one line of output. Second, report accuracy against an independently
+known value, and state the basis of that value; if the only evidence available
+is a linearity statistic, say so, and say what it does and does not bound.
+
+Future work should characterise the fitted calibration resistor against a
+traceable standard to separate the residual $0.3\,\%$ instrument term, extend
+validation across transimpedance ranges and current decades, repair the
+low-power loop drive in the direct-current method classes and the impedance
+acquisition path, and factor the triplicated configuration and conversion code
+into a single shared component so that a defect found once is fixed once.

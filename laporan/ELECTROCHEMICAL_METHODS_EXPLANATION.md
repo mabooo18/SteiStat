@@ -116,6 +116,8 @@ The transimpedance amplifier used by CA, SWV, DPV, and EIS (in "measure the cell
 
 If `HpLoopCfg.HsTiaCfg` is left unconfigured (all fields zero, the struct's default state), `HstiaRtiaSel` decodes to its lowest index and — critically — the DE routing does not connect the amplifier's output to anywhere the ADC mux can read, so conversions return a constant/garbage code that decodes to a current near zero no matter what the cell is actually doing. This is exactly the bug found and fixed in `C_CA`/`C_SWV`/`C_DPV` during this session — see §3 and the architecture document's §8.
 
+> **A related, still-open gap found 2026-08-01**: the switch-matrix line just above this table, `HpLoopCfg.SWMatCfg.Nswitch = SWN_SE0`, is hardcoded identically in `C_CA`, `C_SWV`, and `C_DPV` — there is no serial command or config path anywhere in the firmware to route a different physical working-electrode pin. A live test against a 3-branch dummy cell (one nonlinear diode branch, two plain-resistor/RC branches — see `UPDATE_2026-08-01.md` §2) produced flat, noisy CA/SWV traces with no discernible peak; the leading hypothesis is that `SE0` isn't wired to the one branch capable of producing a peaked response, which this firmware currently has no way to change without rewiring the board. See `ARCHITECTURE_DOCUMENT.md` §9, item 5.
+
 ---
 
 ## 3. Chronoamperometry (CA) in Code
@@ -154,7 +156,7 @@ If `HpLoopCfg.HsTiaCfg` is left unconfigured (all fields zero, the struct's defa
 ### Step-by-Step Code Flow:
 *Because CV sweeps are fast and require precise timing, doing this in microcontroller loops causes jitter. Instead, the firmware compiles commands directly into the AD5941's internal **Hardware Sequencer SRAM**.*
 
-1. **Setup Parameters**: The variables `V_Start`, `V_Stop`, `EStep` (step size), and `ScanRate` (speed) are configured.
+1. **Setup Parameters**: The variables `V_Start`, `V_Stop`, `EStep` (step size), and `ScanRate` (speed) are configured. **These are all millivolt-scale** (`RampTest.h`'s `DAC12BITVOLT_1LSB = 2200/4095 ≈ 0.537 mV` — every field in `AppRAMPCfg_Type` is mV-based, matching CA/SWV/DPV's convention elsewhere in this document). A 2026-08-01 bug in the Python UI sent these four fields in volts instead — e.g. `0.5` instead of `500` — which collapsed a normal ~700-point sweep down to exactly 2 points, since the step-count formula below effectively saw a sub-1mV total voltage swing. Fixed on the UI side (`hunstat2_test_ui.py` now converts V→mV before sending); see `UPDATE_2026-08-01.md` §3.1 for the full derivation.
 2. **Sequencer Compilation (`AppRAMPInit`)**:
    * The code calculates the list of voltage steps from start to peak and back.
    * It compiles sequencer command blocks:

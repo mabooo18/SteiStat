@@ -1,0 +1,129 @@
+\section{Methods}
+\label{sec:methods}
+
+\subsection{Instrument and firmware baseline}
+The instrument under test is HunStat2, a single-channel three-electrode
+potentiostat built around the AD5941 AFE and a Seeed Studio XIAO RP2040
+microcontroller, following the AD5940 datasheet, standard three-electrode
+potentiostat design practice, and the AD5940 evaluation-kit reference
+firmware~\cite{devices2024ad5940,ad5940_eis_github}, detailed in
+Section~\ref{sec:instrument-design}. The firmware baseline for this
+study is the \texttt{AD5941\_25} sketch as of the ``update~7 (20 September
+26)'' snapshot in the project repository, compiled with the
+\texttt{rp2040:rp2040} Arduino core (v5.6.0) via \texttt{arduino-cli}, and
+flashed to a physical XIAO RP2040 board over USB for every measurement
+reported here. No simulation or mock serial layer was used at any point;
+every dataset in this paper was collected from the physical instrument.
+
+\subsection{Software-architecture audit}
+Every \texttt{.h}/\texttt{.cpp} file under \texttt{AD5941\_25/src/} was read
+in full and characterized on five axes: what class or module owns the file,
+what OOP concepts (encapsulation, inheritance, polymorphism) are actually
+present versus merely named, what the file depends on, what problems the
+implementation has, and what a targeted fix would look like. A repository-wide
+search for \texttt{virtual}, \texttt{: public} (inheritance), and
+\texttt{template<} was run to establish, independent of any per-file
+judgment, whether polymorphism or generic code exists anywhere in project
+code. Call-site tracing -- following every function actually invoked from
+\texttt{loop()} down through the dispatch layer -- was used to distinguish
+code that executes from code that merely compiles.
+
+\subsection{Refactor}
+Three changes were made, each scoped to be individually verifiable against
+the pre-refactor source:
+
+\begin{enumerate}
+\item \textbf{Shared base class for DC-excitation methods.} The audit found
+that \texttt{C\_CA::ConfigDCMeasurement()}, \texttt{C\_DPV::ConfigDCMeasurement()},
+and \texttt{C\_SWV::ConfigDCMeasurement()} -- along with each class's
+\texttt{MeasureCurrentRaw()} and \texttt{RawToCurrent()} -- were identical
+except for class-qualification and comment wording, confirmed by a line-level
+diff of all three implementations. These three methods configure the AD5940
+low-power loop (LPDAC/LPTIA), trigger one ADC conversion, and convert the raw
+code to amperes; they encode a substantial amount of hard-won,
+previously-debugged register-sequencing knowledge (documented in the source
+comments: AFE wake state, DAC polarity, PGA gain enumeration, LPTIA routing).
+A new class, \texttt{C\_DCPotentiostatMethod}, was introduced holding these
+three methods verbatim -- copied register-for-register and
+formula-for-formula, not rewritten -- and \texttt{C\_CA}, \texttt{C\_DPV},
+and \texttt{C\_SWV} were changed to inherit from it publicly, retaining only
+their method-specific \texttt{Run()} sequencing (the differing pulse/staircase
+timing that makes CA, DPV, and SWV distinct methods). This is a standard
+Extract Superclass refactor~\cite{fowler2018refactoring}: it is a template
+method in spirit (a shared measurement primitive, per-method sequencing on
+top) without requiring a \texttt{virtual} dispatch, since the concrete
+subclass is always known statically at the call site.
+\item \textbf{Dead-code removal.} \texttt{command\_processing.cpp/.h} (a
+$\sim$700-line free-function command parser) and
+\texttt{electrochemical\_methods.cpp/.h} (a free-function
+reimplementation of CA/SWV/DPV against a separate set of globals) were
+confirmed, by tracing every call site, to be unreachable: \texttt{loop()}
+calls only \texttt{C\_Communication::ReadAndProcess()}, whose own
+\texttt{SplitAndProcessCommands()} is a same-named but distinct class
+method, never the free function of the same name. Both files were deleted
+rather than merely un-included, since the Arduino build compiles every
+\texttt{.cpp} file under the sketch's \texttt{src/} tree regardless of
+whether it is \texttt{\#include}d.
+\item \textbf{Status-LED bug fix.} \texttt{Interface\_SetLed(color)}
+unconditionally rendered white regardless of its argument, silently
+defeating every caller's status color coding (cyan during CA, magenta
+during DPV, yellow during SWV, green on completion). The correct
+color-index-to-RGB mapping was recovered from an already-correct but
+separately dead helper (\texttt{LED()} in \texttt{utilities.cpp}, never
+called from anywhere) and used to fix the live function; the previously
+dead helper was left untouched and out of scope.
+\end{enumerate}
+
+Code duplication of this kind is not a cosmetic concern: independent
+empirical work on code clones has shown that inconsistently-maintained
+duplicates measurably increase defect rates relative to non-duplicated
+code~\cite{juergens2009clones}, which is exactly the failure mode two
+divergent globals-based implementations of the same command grammar
+represent.
+
+\subsection{Dummy-cell validation protocol}
+\label{sec:protocol}
+Correctness preservation was checked empirically rather than argued from
+the diff alone, reusing the dummy-cell protocol validated in the companion
+manuscript~\cite{clement2026linearity}. Two real loads were used, connected
+in place of an electrochemical cell across the working, reference, and
+counter electrode terminals:
+
+\begin{itemize}
+\item \textbf{Randles dummy cell} ($R_s=\SI{560}{\ohm}$,
+  $R_{ct}=\SI{10}{\kilo\ohm}$, $C_{dl}=\SI{33}{\nano\farad}$), used for the
+  primary before/after comparison.
+\item \textbf{Plain resistor} ($\SI{10}{\kilo\ohm}$, no capacitive branch),
+  substituted in place of the Randles cell as a second, independent load
+  used only on the refactored firmware, to corroborate that the measured
+  current-voltage relationship is sane under a load the refactor was not
+  implicitly tuned against.
+\end{itemize}
+
+For each firmware build (pre-refactor, post-refactor), the board was
+flashed, and all four electrochemical methods were exercised over the
+Randles cell using the instrument's native ASCII command protocol over USB
+serial at \SI{1}{\mega baud}:
+
+\begin{itemize}
+\item \textbf{CV}: \texttt{D-200,600,5,100,1} (start \SI{-200}{\milli\volt},
+  stop \SI{600}{\milli\volt}, step \SI{5}{\milli\volt}, scan rate
+  \SI{100}{\milli\volt\per\second}, 1 cycle), triggered with \texttt{M}.
+\item \textbf{CA}: step to \SI{100}{\milli\volt} for \SI{2}{\second} at
+  \SI{40}{\hertz} sampling, triggered with \texttt{A}.
+\item \textbf{SWV}: \SIrange{0}{200}{\milli\volt}, \SI{20}{\milli\volt}
+  step, \SI{25}{\milli\volt} amplitude, triggered with \texttt{W}.
+\item \textbf{DPV}: \SIrange{0}{200}{\milli\volt}, \SI{20}{\milli\volt}
+  step, \SI{25}{\milli\volt} pulse amplitude, triggered with \texttt{D}.
+\end{itemize}
+
+Each sweep was captured over serial with a Python client enforcing an
+explicit per-step deadline (never blocking indefinitely on a hung board),
+parsing the method-tagged output lines (\texttt{CV,<mV>,<I>},
+\texttt{CA,<s>,<I>,<raw>,<timeout flag>}, \texttt{SWV,<mV>,<$\Delta$I>},
+\texttt{DPV,<mV>,<$\Delta$I>}) until the method's completion marker
+(\texttt{*\_END}) or a 2-second data-silence timeout. The same procedure
+was repeated on the refactored firmware against the $\SI{10}{\kilo\ohm}$
+resistor load. No firmware parameter, calibration constant, or command
+sequence differed between the pre- and post-refactor runs; the only
+variable was the source code itself.

@@ -1,0 +1,115 @@
+\section{Introduction}
+\label{sec:intro}
+
+Potentiostats built around Analog Devices' AD5940/AD5941 electrochemical
+analog front end (AFE) have become a recognizable instrument class within
+the open-source, low-cost hardware literature. The AD5940/AD5941 integrates
+a potentiostat loop, a transimpedance amplifier with a selectable feedback
+resistor ladder, a 16-bit sigma-delta ADC, and a hardware DFT accelerator on
+a single part~\cite{devices2024ad5940}, which is why it recurs across
+independently developed instruments: FreiStat~\cite{bill2023electrochemical},
+HELPStat~\cite{bautista2025helpstat}, GaneStat~\cite{anshori2025ganestat},
+and Vamos et al.'s HunStat2~\cite{vamos2025hunstat2} all use it as their AFE.
+The instrument studied in this paper is our own AD5941/RP2040 potentiostat,
+also named HunStat2, built directly from the AD5940 datasheet, standard
+three-electrode potentiostat design practice, and the AD5940 evaluation-kit
+reference firmware~\cite{ad5940_eis_github} (Section~\ref{sec:instrument-design}
+details the components and signal-chain layout); it is listed separately
+from Vamos et al.'s instrument of the same name in
+Table~\ref{tab:related} to keep the two unambiguous. This is a meaningful
+design choice, not an incidental one.
+A discrete op-amp potentiostat -- the lineage that CheapStat and its
+successors established~\cite{rowe2011cheapstat} -- puts the burden of
+transimpedance gain accuracy, switch-matrix leakage, and reference-voltage
+stability on the builder's own PCB layout and component tolerances. A
+commercial AFE moves that burden onto a part that Analog Devices
+manufactures, tests, and characterizes at volume; what a AD5940-based build
+can still get wrong is confined to firmware -- how the chip's registers are
+sequenced, how its raw codes are converted to physical units, and how that
+logic is organized in code. That confinement is the premise of this paper:
+if the analog front end is already commercial-grade, the object most worth
+scrutinizing for reliability is the software layer sitting on top of it, not
+the analog design.
+
+The most recent survey of this instrument class, published in 2026,
+substantiates the premise but also exposes a gap. Aviha and Slaughter's
+review of modern potentiostat architectures explicitly covers ``Control
+Software and User Interfaces'' as a section, citing FreiStat and Vamos et
+al.'s HunStat2 by name~\cite{aviha2026modern}. Its treatment is entirely functional --
+parameter configuration, real-time visualization, scripted automation -- and
+at no point addresses how that software is structured: no discussion of
+modularity, code duplication, encapsulation, or any other software-engineering
+quality attribute appears anywhere in the review. Von Zuben et al.'s 2024
+review of low-cost open-source potentiostats covers the electronics side of
+DIY builds in comparable depth and likewise stops at the hardware/firmware
+boundary~\cite{vonzuben2024lowcost}. Neither review, nor any of the
+individual instrument papers surveyed in
+Table~\ref{tab:related}, treats the firmware's software architecture as a
+variable that affects instrument reliability. This is the gap this paper
+addresses: we ask, for one concrete instrument, whether firmware software
+quality can be measured, whether it can be improved with ordinary
+refactoring technique, and whether that improvement can be shown -- not
+argued -- to leave the instrument's actual measurements unchanged.
+
+\begin{table}[h]
+\centering
+\caption{Software-architecture treatment in AD5940-lineage and comparable
+low-cost potentiostat literature. ``Vamos et al.'' denotes the independently
+published instrument of~\cite{vamos2025hunstat2}, which happens to share a
+name with, but is a separate build from, the HunStat2 instrument audited in
+this paper (``This work'').}
+\label{tab:related}
+\begin{threeparttable}
+\begin{tabular}{@{}lllc@{}}
+\toprule
+Work & AFE & Methods & Firmware architecture assessed \\
+\midrule
+CheapStat~\cite{rowe2011cheapstat}       & Discrete op-amp & CV, SWV, LSV & No \\
+FreiStat~\cite{bill2023electrochemical}  & AD5941      & CA, CV, DPV, EIS & No \\
+HELPStat~\cite{bautista2025helpstat}     & AD5940      & CV, EIS      & No \\
+GaneStat~\cite{anshori2025ganestat}      & Discrete op-amp & CV, CA, EIS & No \\
+Vamos et al.~\cite{vamos2025hunstat2}    & AD5941      & CV, OCP, EIS & No \\
+Review (2024)~\cite{vonzuben2024lowcost} & --          & --           & No (electronics only) \\
+Review (2026)~\cite{aviha2026modern}     & --          & --           & No (functional only) \\
+This work                                & AD5941      & CV, CA, SWV, DPV & \textbf{Yes} \\
+\bottomrule
+\end{tabular}
+\end{threeparttable}
+\end{table}
+
+We audit our own HunStat2 firmware because it is the same instrument
+independently validated at the metrology level in a companion
+manuscript~\cite{clement2026linearity}, which found and corrected a
+firmware calibration defect using a traceable dummy-cell protocol. That
+work established \emph{that} the instrument's measurements can be trusted
+once corrected; it did not examine \emph{how} the firmware that produces
+those measurements is built, nor whether its structure poses a risk to that
+correctness going forward. This paper is deliberately scoped as the
+complementary half of that question. Where the companion manuscript treats
+the dummy cell as the object of interest and the firmware as a black box to
+be calibrated, this paper treats the firmware's internal structure as the
+object of interest and reuses the same dummy-cell protocol only as a
+correctness check -- to confirm that improving the software does not
+regress the measurements the companion manuscript worked to validate.
+
+Our contributions are:
+\begin{enumerate}
+\item A file-by-file object-oriented-design audit of the HunStat2 firmware,
+  identifying (i) a measurement-configuration routine duplicated verbatim
+  across three of five electrochemical-method classes, (ii) two entire
+  subsystems -- a command-line parser and a second implementation of the
+  electrochemical methods -- that are fully unreachable at runtime, and
+  (iii) a live status-indicator bug that silently discards its input.
+\item A scoped refactor that collapses (i) into one shared base class,
+  removes (ii) after confirming via call-site tracing that it is dead, and
+  fixes (iii), implemented as changes a reviewer can verify line-by-line
+  against the original.
+\item Hardware-measured validation of the refactor: the same CV, CA, SWV,
+  and DPV sweeps against the same real dummy cell, run on the instrument
+  before and after the refactor, quantifying how close ``after'' stays to
+  ``before'' rather than merely asserting it.
+\item A second, independent real load (a plain resistor, distinct from the
+  dummy cell used for the primary comparison) run on the refactored
+  firmware only, to corroborate that the post-refactor behavior generalizes
+  beyond one specific load rather than having been tuned to it.
+\end{enumerate}

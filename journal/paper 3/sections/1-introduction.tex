@@ -1,0 +1,113 @@
+\section{Introduction}
+\label{sec:intro}
+
+Potentiostats built around Analog Devices' AD5940/AD5941 electrochemical
+analog front end (AFE) have become a recognizable instrument class within
+the open-source, low-cost hardware literature: FreiStat~\cite{bill2023electrochemical},
+HELPStat~\cite{bautista2025helpstat}, GaneStat~\cite{anshori2025ganestat},
+and Vamos et al.'s HunStat2~\cite{vamos2025hunstat2} all use it as their
+AFE, in the same lineage as discrete op-amp designs such as
+CheapStat~\cite{rowe2011cheapstat}. A commercial AFE moves most of the
+burden of getting a potentiostat's analog performance right -- transimpedance
+gain accuracy, switch-matrix leakage, reference-voltage stability -- onto a
+part that Analog Devices manufactures, tests, and characterizes at
+volume~\cite{devices2024ad5940}. It does \emph{not} remove the burden of
+driving that part correctly. The AD5940 exposes two independent,
+purpose-built excitation/sensing paths -- a Low-Power (LP) loop for DC and
+near-DC potentiostat operation, and a High-Speed (HS) loop for AC/impedance
+excitation -- and firmware that configures the wrong one for a given
+method, or that misinterprets the numeric convention of the raw code the
+chip returns, produces code that compiles cleanly and runs without
+crashing while still being physically wrong. Two design concerns recur for
+an instrument built this way: (i) the firmware architecture needed to
+correctly operate the AFE's two excitation/sensing paths for each
+electrochemical method, and (ii) the software architecture needed to keep
+that firmware maintainable as more methods and features are added. This
+paper documents both for HunStat2, using its own C++ class structure as
+evidence rather than the presence of a \texttt{class} keyword alone
+(Section~\ref{sec:instrument-design}), and focuses its own diagnosis and
+fix on the first concern. A wrong signal path or a wrong ADC convention
+tends to produce output that is visibly, unmistakably broken -- flat,
+noisy, or discontinuous -- which makes it easy to \emph{notice} but not
+necessarily easy to \emph{root-cause} without a correctly-working
+reference to compare against. This is a different failure mode from the
+ones the two companion manuscripts on this instrument document: a
+constant-gain calibration error is numerically well-behaved and passes
+every linearity check~\cite{clement2026linearity}, and the software
+architecture concern above is, on its own, a maintainability and
+future-defect risk that need not affect any single
+measurement~\cite{clement2026architecture} -- except, as
+Section~\ref{sec:oop} shows, when the same duplication that makes an
+architecture hard to maintain also means a single correctness bug exists
+in multiple literal copies at once.
+
+This paper reports two such defects, found in our firmware's
+chronoamperometry (CA), square-wave voltammetry (SWV), and differential
+pulse voltammetry (DPV) classes, by the most direct diagnostic method
+available for a commercial-AFE design: comparing our implementation, file
+by file and register by register, against the performance and
+register-level behavior of Analog Devices' own AD5940 evaluation-kit
+reference examples for the same class of
+measurement~\cite{ad5940_examples_github} -- the same evaluation-kit code
+this firmware, and the instrument as a whole
+(Section~\ref{sec:instrument-design}), is built from. Prior internal testing on this
+project had reported that CA and SWV produced ``flat, noisy scatter with no
+discernible decay or peak'' against a resistive/capacitive dummy cell, while
+cyclic voltammetry (CV) and open-circuit potential (OCP) -- which use a
+different, independently-derived code path -- worked normally. That
+asymmetry was itself a clue: whatever was wrong was specific to the three
+affected classes' own signal-path configuration, not a property of the AFE
+or the board.
+
+\textbf{Contributions.} This paper makes the following contributions:
+\begin{enumerate}
+\item A structured audit of the firmware's hardware architecture, software
+  architecture, and object-oriented design maturity
+  (Section~\ref{sec:instrument-design}), using the actual source code as
+  evidence: of eight C++ classes, only two exhibit non-trivial
+  encapsulation, no inheritance or polymorphism is used anywhere in the
+  codebase, and three method classes contain verbatim-duplicated
+  measurement-configuration code.
+\item A structured, file-by-file comparison of this project's CA/SWV/DPV
+  firmware against Analog Devices' own \texttt{AD5940\_ChronoAmperometric},
+  \texttt{AD5940\_SqrWaveVoltammetry}, and \texttt{AD5940\_Ramp} reference
+  examples~\cite{ad5940_examples_github}, using the vendor's own code as
+  ground truth rather than the presence of a \texttt{class} keyword or a
+  plausible-looking register write.
+\item Diagnosis and correction of two concrete firmware defects that
+  together fully explain a previously-reported CA/SWV data-quality
+  failure: (i) the three classes configured the AD5940's High-Speed
+  loop where every vendor DC-method reference instead configures the
+  Low-Power loop, and (ii) the ADC conversion routine used the wrong
+  zero-point convention for the chip's offset-binary signed codes -- and
+  the observation that, because of contribution 1's duplication, each had
+  to be found and fixed three times over, once per copy.
+\item An explicit classification of every other difference the comparison
+  surfaced into \emph{deliberate} design choices appropriate to this
+  instrument's live, host-driven use case, versus \emph{genuine,
+  unreconciled} gaps -- including one gap this paper does not itself close
+  (on-board RTIA live-calibration) but that the companion metrology
+  manuscript's traceable protocol independently
+  addresses~\cite{clement2026linearity}.
+\item Hardware-validated performance evidence, using the same firmware
+  baseline and traceable dummy-cell protocol validated in the two
+  companion manuscripts~\cite{clement2026linearity,clement2026architecture},
+  that the corrected signal chain produces correctly-signed,
+  signal-dependent output for CA, CV, SWV, and DPV, and that its cyclic
+  voltammetry is independently accurate ($R^2\geq0.999994$,
+  $+0.428\,\%$ recovered-resistance error), not merely self-consistent.
+\end{enumerate}
+
+This paper's own audit (contribution 1) is deliberately scoped to what is
+needed to motivate and contextualize its signal-path/ADC-convention fix:
+it documents the duplication and the encapsulation gap as found, but does
+not itself restructure the firmware. That structural refactor -- collapsing
+the duplicated code into a shared base class, removing confirmed-dead
+subsystems, and hardware-measuring that the refactor does not change any
+method's output -- is reported in full, and separately validated, in the
+companion architecture manuscript~\cite{clement2026architecture}; the
+gain-calibration traceability protocol referenced throughout is reported
+in full in the companion metrology manuscript~\cite{clement2026linearity}.
+Sensor development, analyte concentration measurement, and
+limit-of-detection studies remain explicitly out of scope for the whole
+instrument family.

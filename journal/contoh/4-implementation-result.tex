@@ -1,0 +1,76 @@
+\section{Results}
+No STEI-ZStat spectrum contained points with $Z'' > 0$. Every PalmSens4 spectrum contained six such points below 1~Hz (0.2--0.72~Hz). These points differed from the analytical reference by only $-$0.05\% to $-$0.11\% in $|Z|$ and approximately 0.05$^\circ$ in phase, indicating a small sign reversal near the noise level. The same frequencies were affected in all seven replicates, so this behavior was repeatable under the tested PalmSens4 configuration. The points were therefore flagged and down-weighted rather than removed.
+
+Figure~\ref{fig:spectra} shows that the aggregated spectra from both instruments are visually similar. Because the two traces coincide at this scale, the quantitative comparison is made in Fig.~\ref{fig:deviation} and Tables~\ref{tab:repeatability} and \ref{tab:cnls} rather than by inspection of the overlay. Both instruments reproduced the nominal resistance values within 0.31\% (Table~\ref{tab:repeatability}), well within the predefined $\pm$2\% acceptance margin. Replicate variability was also low, with median standard deviations of 0.024\% versus 0.026\% in $|Z|$ and 0.013$^\circ$ versus 0.025$^\circ$ in phase for STEI-ZStat and PalmSens4, respectively. The maximum magnitude SD was 0.077\% for STEI-ZStat and 0.254\% for PalmSens4, occurring between 1.2 and 1.5~kHz.
+
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.15}
+\caption{Repeatability and Passive-Reference Agreement}
+\label{tab:repeatability}
+\centering
+\resizebox{\columnwidth}{!}{
+\begin{threeparttable}
+\begin{tabular}{>{\raggedright\arraybackslash}p{4cm}>{\raggedright\arraybackslash}p{2cm}>{\raggedright\arraybackslash}p{2cm}}
+\hline
+\textbf{Statistics} & \textbf{STEI-ZStat} & \textbf{PalmSens4} \\
+\hline
+200 kHz plateau reading vs. $R_s$ (560.0 $\Omega$) & (561.55 $\pm$ 0.26) $\Omega$, +0.28\% & (558.25 $\pm$ 1.02) $\Omega$, $-$0.31\% \\
+\hline
+0.2 Hz plateau reading vs. $R_s+R_{ct}$ (10560.0 $\Omega$) & (10589.6 $\pm$ 3.2) $\Omega$, +0.28\% & (10534.1 $\pm$ 1.0) $\Omega$, $-$0.25\% \\
+Replicate SD, median(max) $\lvert Z\rvert$ (\%) & 0.024 (0.077) & 0.026 (0.254) \\
+\hline
+Replicate SD, phase ($^\circ$); median(max) & 0.013 (0.046) & 0.025 (0.153) \\
+\hline
+Impedance deviation against reference, $\Delta\lvert Z\rvert$ (\%); median(max) & 0.111 (0.613) & 0.236 (0.738) \\
+\hline
+Phase deviation against reference, $\Delta$phase ($^\circ$); median(max) & 0.067 (1.215) & 0.070 (0.329) \\
+\hline
+\end{tabular}
+\end{threeparttable}}
+\end{table}
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.3}
+\caption{CNLS Parameter Recovery and Practical Equivalence}
+\label{tab:cnls}
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{threeparttable}
+\begin{tabular}{>{\raggedright\arraybackslash}p{1.6cm}>{\raggedright\arraybackslash}p{1.4cm}>{\raggedright\arraybackslash}p{1.8cm}>{\raggedright\arraybackslash}p{2cm}>{\raggedright\arraybackslash}p{2cm}}
+\hline
+\textbf{Instrument} & \textbf{Parameters} & \textbf{$R_s$} & \textbf{$R_{ct}$} & \textbf{$C_{dl}$} \\
+\hline
+\multirow{3}{1.8cm}{\raggedright STEI-ZStat} & Value & 562.35 $\Omega$ & 9996.03 $\Omega$ & 30.25 nF \\
+& Deviation & +0.419\% & $-$0.040\% & $-$8.33\% \\
+& \%RSD & 0.010 & 0.007 & 0.079 \\
+\hline
+\multirow{3}{1.8cm}{\raggedright PalmSens4} & Value & 559.47 $\Omega$ & 9967.86 $\Omega$ & 30.94 nF \\
+& Deviation & $-$0.094\% & $-$0.321\% & $-$6.23\% \\
+& \%RSD & 0.027 & 0.004 & 0.263 \\
+\hline
+\multirow{3}{1.8cm}{\raggedright STEI-ZStat vs.\ PalmSens4} & Difference & +2.875 $\Omega$ & +28.17 $\Omega$ & $-$0.693 nF \\
+& 95\% CI & [+2.73, +3.02] & [+27.47, +28.87] & [$-$0.77, $-$0.62] \\
+& Acceptance Criteria & $\pm$11.20 $\Omega$ (2\% of 560 $\Omega$) & $\pm$200.00 $\Omega$ (2\% of 10 k$\Omega$) & $\pm$3.30 nF (10\% of 33 nF) \\
+\hline
+\end{tabular}
+\begin{tablenotes}
+\item[] Values are means of seven independent CNLS fits, one per replicate spectrum; \%RSD is the relative standard deviation across those seven fits, in percent. Acceptance criteria are fixed from the nominal component values and were set before analysis.
+\end{tablenotes}
+\end{threeparttable}%
+}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\columnwidth]{fig3_deviation_vs_frequency.png}
+\caption{Deviation of $|Z|$ and phase from the analytical reference plotted against frequency. The analytical reference is the impedance computed from the Randles model with $R_s$ and $R_{ct}$ held at their rated values and $C_{dl}$ fitted; deviation is expressed as a percentage of the reference $|Z|$ and as a phase difference in degrees. Solid traces represent a mean of seven replicate measurements while dotted lines represent $\pm$1 standard deviation from a single measurement as a noise scale.}
+\label{fig:deviation}
+\end{figure}
+
+Figure~\ref{fig:deviation} shows the deviation from the analytical reference across frequency. STEI-ZStat showed a lower median magnitude deviation than PalmSens4 (0.111\% versus 0.236\%), while its phase deviation above 10~kHz was larger, as reported below; maximum magnitude deviations were comparable (0.613\% versus 0.738\%). Median phase deviations were also similar (0.067$^\circ$ versus 0.070$^\circ$). Above 10~kHz, STEI-ZStat phase deviation increased to 1.215$^\circ$ at 200~kHz, compared with 0.329$^\circ$ for PalmSens4. Over the measured points below 100~kHz (0.2~Hz--92.8~kHz), the maximum STEI-ZStat phase deviation was 0.868$^\circ$ at 71.9~kHz.
+
+Mean CNLS relative residuals were 0.36\% for STEI-ZStat and 0.33\% for PalmSens4, indicating comparable agreement with the fitted model. All fitted parameters satisfied the $\pm$2\% resistance and $\pm$10\% capacitance criteria, with replicate variability below 0.3\% RSD (Table~\ref{tab:cnls}). Both instruments estimated the capacitance below the 33~nF nominal value ($-$8.33\% and $-$6.23\%). The fitted-parameter differences were statistically significant, as all 95\% CIs excluded zero, but every CI remained within the predefined acceptance windows. No confidence interval extended beyond 27\% of its corresponding acceptance margin.
+
+Across the three STEI-ZStat boards, mean recovered parameters were 562.43, 562.50, and 562.72~$\Omega$ for $R_s$; 9995.1, 9997.4, and 9996.1~$\Omega$ for $R_{ct}$; and 30.32, 30.24, and 30.25~nF for $C_{dl}$, giving inter-board relative standard deviations of 0.027\%, 0.011\%, and 0.148\%, respectively. The board used in the primary comparison reproduced its previously recovered $R_s$ and $R_{ct}$ to within 0.02\%. High-frequency phase deviation was also reproducible between boards, reaching 1.227$^\circ$, 1.205$^\circ$, and 1.240$^\circ$ at 200~kHz.
+

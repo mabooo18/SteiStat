@@ -1,0 +1,117 @@
+\section{Introduction}
+\label{sec:intro}
+
+Low-cost, open-source potentiostats have made electroanalytical measurement
+accessible far beyond the benchtop, in point-of-care, field and teaching
+settings~\cite{rowe2011cheapstat, jenkins2019abe, brown2022acestat,
+bautista2025helpstat, anshori2025ganestat}. Integrated electrochemical analog
+front ends, in particular the Analog Devices AD5940/AD5941, now place a
+complete potentiostatic control loop, a transimpedance input stage and a
+hardware discrete Fourier transform engine on a single die, so that a credible
+multi-technique instrument fits on a business-card-sized board for a few tens of
+dollars~\cite{devices2024ad5940, bill2023electrochemical, vamos2025hunstat2}.
+
+What has not kept pace is the evidence offered that these instruments
+\emph{measure correctly}. Reported validations lean on spectral or voltammetric
+overlays, quoted error bounds, significance tests against a commercial
+reference, and---for voltammetric methods above all---the coefficient of
+determination of a straight-line fit against a resistive dummy
+cell~\cite{pruna2018low, matsubara2021small, burgos2022tbistat,
+vamos2025hunstat2}. The last of these is close to universal, because it is
+cheap, requires no reference instrument, and produces a reassuring number: a
+resistor obeys Ohm's law, so a correct instrument must return a straight line,
+and $R^2$ values of $0.999$ and above are routinely reported as evidence of
+correct operation.
+
+This paper's central observation is that such evidence is \emph{structurally
+incapable} of detecting the most consequential class of error an instrument of
+this kind can have. Suppose the reported current is related to the true current
+by an unknown constant gain, $I_{\mathrm{rep}} = k\,I_{\mathrm{true}}$, as it
+is whenever a transimpedance gain is mis-calibrated. Against a resistor,
+$I_{\mathrm{true}} = V/R$, so $I_{\mathrm{rep}} = (k/R)\,V$: still exactly a
+straight line through the origin. The coefficient of determination is invariant
+under any affine rescaling of the dependent variable, so $R^2$ is
+\emph{identical} for every value of $k$. A linearity check cannot see a gain
+error, no matter how large, because the fitted slope silently absorbs it. The
+same argument disqualifies Pearson correlation, normalised RMSE, and any
+"linearity (\%)" figure of merit. Only a statistic that compares the fitted
+slope against an independently known quantity can detect it.
+
+We show that this is not a hypothetical concern. Applying a traceability-first
+validation protocol to a working AD5941/RP2040 instrument, we found that its
+cyclic voltammetry recovered a resistance \emph{424\,\% in error}---currents low
+by a factor of $5.22$---while passing a
+linearity check at $R^2 > 0.99999$---and that the linearity statistic was
+numerically insensitive to the error across more than two decades of induced
+gain deviation. The root cause was a single software constant: the value of the
+on-board calibration resistor declared in firmware did not match the resistor
+actually fitted to the board. That constant sets the reference against which the
+front end calibrates its own transimpedance gain, so it propagates directly into
+every reported current, and it is invisible to every validation statistic in
+common use.
+
+The defect is mundane, which is precisely the point. A mismatch between a
+hardware option and a firmware constant is a configuration error, not a design
+error; it survives code review, unit tests, and visual inspection of the output,
+because nothing about the output looks wrong. Table~\ref{tab:comparison}
+summarises the validation methods reported for representative low-cost
+potentiostats. Of the instruments surveyed, the voltammetric validations are
+dominated by exactly the gain-blind statistics identified above.
+
+\paragraph{Contributions} This work makes four contributions.
+\begin{enumerate}
+\item We give the argument, and the experimental demonstration, that linearity
+  statistics are mathematically blind to transimpedance gain error, and we
+  quantify the blindness by inducing gain errors of known size and showing that
+  $R^2$ does not move (Section~\ref{sec:trap}).
+\item We define a five-check validation protocol for voltammetric methods that
+  is traceable to component nominal values and requires no reference instrument,
+  and whose first check targets the scale-setting chain that linearity ignores
+  (Section~\ref{sec:protocol}).
+\item We apply it to the HunStat2 AD5941/RP2040 instrument on a precision
+  passive Randles cell, identify and correct eight firmware defects, and report
+  post-correction accuracy, repeatability, and invariance across scan rate,
+  potential window and step size (Section~\ref{sec:results}).
+\item We report an honest per-method coverage audit. Cyclic voltammetry is
+  validated quantitatively; chronoamperometry, square-wave and differential
+  pulse voltammetry, and impedance spectroscopy are shown \emph{not} to produce
+  valid cell current on this hardware, with the fault localised, which
+  demonstrates the companion point that one working method does not validate an
+  instrument (Section~\ref{sec:coverage}).
+\end{enumerate}
+
+\begin{table*}[!t]
+\caption{Validation evidence reported for representative low-cost
+potentiostats. The final column asks whether the reported evidence could, even
+in principle, detect a constant current-scale (transimpedance gain) error.}
+\label{tab:comparison}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{threeparttable}
+\begin{tabular}{@{}l l >{\raggedright\arraybackslash}p{2.2cm} >{\raggedright\arraybackslash}p{4.3cm} c@{}}
+\toprule
+\textbf{Instrument} & \textbf{Front end} & \textbf{Methods} &
+\textbf{Reported validation evidence} & \textbf{Gain-} \\
+ & & & & \textbf{sensitive?} \\
+\midrule
+CheapStat~\cite{rowe2011cheapstat}      & discrete    & CV, SWV, ACV & Voltammograms of redox standards; qualitative comparison & No\tnote{a} \\
+Pruna et al.~\cite{pruna2018low}        & AD5933      & EIS          & Regression against VMP3, $R^{2}=0.98$ & No\tnote{b} \\
+ABE-STAT~\cite{jenkins2019abe}          & AD5933      & CV, DPV, EIS & RMS noise; potentiometric regression & No\tnote{b} \\
+Matsubara~\cite{matsubara2021small}     & discrete    & CV, SWV, CA, EIS & Quoted error bounds only & Partly\tnote{c} \\
+TBISTAT~\cite{burgos2022tbistat}        & AD5933      & EIS          & $t$-test; Levene; normality checks & No\tnote{d} \\
+ACEStat~\cite{brown2022acestat}         & discrete    & CV, SWV, CA, EIS & Randles fitting; margin of error & Yes \\
+HELPStat~\cite{bautista2025helpstat}    & AD5941      & EIS          & Paired $t$-test; Theil--Sen against reference & Yes\tnote{d} \\
+HunStat2~\cite{vamos2025hunstat2}       & AD5941      & CV, OCP, EIS & Visual overlay only & No \\
+\textbf{This work}                      & AD5941      & CV\tnote{e}  & Scale traceability; absolute accuracy vs.\ nominal; residual structure vs.\ LSB; replicate \%RSD; parameter invariance & Yes \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}\footnotesize
+\item[a] Qualitative waveform comparison does not constrain absolute current scale.
+\item[b] $R^{2}$ and correlation are invariant under affine rescaling of the measured variable, so a constant gain error leaves them unchanged.
+\item[c] Quoted bounds are gain-sensitive only if they are stated against an independently known absolute value; that basis is not reported.
+\item[d] A comparison against a calibrated reference instrument is gain-sensitive in principle; a significance test alone reports whether a difference exists, not whether it is tolerable.
+\item[e] CA, SWV, DPV, EIS and OCP are implemented in firmware; their status is reported in Section~\ref{sec:coverage} and they are explicitly \emph{not} claimed as validated.
+\end{tablenotes}
+\end{threeparttable}
+\end{table*}

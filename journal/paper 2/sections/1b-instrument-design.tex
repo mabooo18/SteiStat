@@ -1,0 +1,156 @@
+\section{Instrument Design}
+\label{sec:instrument-design}
+
+HunStat2 is a single-channel, three-electrode potentiostat built directly
+from the Analog Devices AD5940/AD5941 datasheet~\cite{devices2024ad5940},
+standard three-electrode potentiostat design practice, and the Analog
+Devices AD5940 evaluation-kit reference firmware~\cite{ad5940_eis_github}.
+This section fixes the terms used throughout the rest of the paper: what
+the instrument is built from (Section~\ref{sec:components}), how those parts
+are wired into a measurement loop (Section~\ref{sec:block-diagram}), and the
+nominal-component ``ideal'' values the dummy-cell measurements of
+Section~\ref{sec:results} are compared against
+(Section~\ref{sec:ideal-values}).
+
+\subsection{Components}
+\label{sec:components}
+Table~\ref{tab:components} lists the instrument's principal components. The
+AD5941 supplies the entire analog measurement chain -- excitation DACs,
+potentiostat and transimpedance amplifiers, ADC, and DFT engine -- as
+characterized, off-the-shelf silicon~\cite{devices2024ad5940}; the RP2040
+MCU is responsible only for register sequencing, host communication, and
+unit conversion, which is why Section~\ref{sec:intro} scopes the paper's
+reliability question to firmware structure rather than analog design.
+
+\begin{table}[h]
+\centering
+\caption{Principal components of the HunStat2 instrument.}
+\label{tab:components}
+\begin{threeparttable}
+\begin{tabular}{@{}p{0.24\linewidth}p{0.68\linewidth}@{}}
+\toprule
+Component & Role / key specification \\
+\midrule
+Electrochemical AFE & Analog Devices AD5941: integrated LP/HS
+  potentiostat loops, 12-bit LPDAC + 6-bit $V_{\mathrm{zero}}$ DAC, 12-bit
+  HSDAC, LP/HS transimpedance amplifiers with a switchable feedback
+  resistor ($\Rtia$: \SI{200}{\ohm}--\SI{160}{\kilo\ohm}, 8 steps), 16-bit
+  $\Sigma\Delta$ ADC, and a hardware DFT accelerator~\cite{devices2024ad5940} \\
+Microcontroller & Seeed Studio XIAO RP2040 (dual-core Cortex-M0+); runs
+  the register-sequencing firmware and the USB-CDC host interface \\
+MCU--AFE link & Bit-banged SPI (custom XIAO pin map; native SPI0 pinout
+  not used), effective clock in the hundreds of kHz, well under the
+  AD5941's rated \SI{12}{\mega\hertz}~\cite{devices2024ad5940} \\
+Calibration resistor bank ($\Rcal$) & Jumper-selectable \SI{200}{\ohm},
+  \SI{4.7}{\kilo\ohm}, \SI{10}{\kilo\ohm} on the carrier board; the
+  reference the AFE measures against to calibrate its own transimpedance
+  gain \\
+Host interface & USB-CDC virtual serial, ASCII single-letter command
+  protocol, \SI{1}{\mega baud} \\
+Electrode/load interface & 3-terminal working/reference/counter (WE/RE/CE)
+  connector; accepts either an electrochemical cell or the passive dummy
+  cell of Section~\ref{sec:ideal-values} \\
+\bottomrule
+\end{tabular}
+\end{threeparttable}
+\end{table}
+
+\subsection{Signal-chain / block diagram}
+\label{sec:block-diagram}
+Figure~\ref{fig:block-diagram} shows the instrument's signal chain, from
+host command to applied excitation and back to reported current. The MCU
+never touches the analog signal; every excitation, sensing, and gain
+decision is made inside the AD5941, and the MCU's role is strictly
+digital -- issue a register sequence, read back a code, convert it to
+physical units. This division is what makes the firmware-architecture audit
+of Section~\ref{sec:methods} meaningful in isolation: a bug in the firmware
+layer cannot masquerade as, or be masked by, an analog defect, because the
+two are architecturally separated at the SPI boundary in
+Figure~\ref{fig:block-diagram}.
+
+\begin{figure}[h]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+  block/.style={draw, rounded corners, minimum height=1.1cm,
+    minimum width=2.3cm, align=center, font=\small},
+  arr/.style={-{Latex[length=2mm]}, thick},
+  edgelabel/.style={font=\scriptsize, align=center, text width=2.3cm}
+]
+\node[block] (pc) {Host PC\\(Python GUI / scripts)};
+\node[block, right=2.7cm of pc] (mcu) {XIAO RP2040\\MCU};
+\node[block, right=2.7cm of mcu] (afe) {AD5941\\AFE};
+\node[block, right=2.9cm of afe] (cell) {3-electrode cell /\\dummy cell};
+
+\draw[arr] (pc) to node[midway, above, edgelabel] {USB-CDC, \SI{1}{\mega baud}\\ASCII commands} (mcu);
+\draw[arr] (mcu) to node[midway, above, edgelabel] {bit-banged SPI\\register read/write} (afe);
+\draw[arr] ([yshift=2.2mm]afe.east) -- node[midway, above, edgelabel] {excitation\\(LPDAC/HSDAC $\to$ WE/CE)} ([yshift=2.2mm]cell.west);
+\draw[arr] ([yshift=-2.2mm]cell.west) -- node[midway, below, edgelabel] {sense current\\(LPTIA/HSTIA $\to$ PGA $\to$ ADC)} ([yshift=-2.2mm]afe.east);
+\end{tikzpicture}%
+}
+\caption{HunStat2 signal chain. The MCU sequences AD5941 registers over a
+bit-banged SPI link and never handles the analog signal directly; the
+AD5941 alone drives the excitation DACs, senses working-electrode current
+through its transimpedance/PGA/ADC path, and reduces it to a raw code. The
+host issues single-letter ASCII commands and receives method-tagged
+data lines over USB-CDC.}
+\label{fig:block-diagram}
+\end{figure}
+
+\subsection{Ideal dummy-cell reference values}
+\label{sec:ideal-values}
+The dummy-cell protocol of Section~\ref{sec:protocol} uses two passive
+loads in place of an electrochemical cell: a Randles network
+($R_s=\SI{560}{\ohm}$, $R_{ct}=\SI{10}{\kilo\ohm}$,
+$C_{dl}=\SI{33}{\nano\farad}$) and a plain \SI{10}{\kilo\ohm} resistor. Both
+have a current-voltage relationship that is fixed by their nominal
+component values, independent of any potentiostat, which is what makes them
+usable as an \emph{ideal} reference rather than merely a repeatable one. For
+the DC methods reported here, the relevant zero-frequency resistance and
+capacitive-loop terms are
+\begin{align}
+R_{\mathrm{DC}} &= R_s + R_{ct}, \label{eq:idc-rdc}\\
+C_{\mathrm{eff}} &= \frac{R_{ct}^{2}\,C_{dl}}{(R_s+R_{ct})^{2}}, \label{eq:idc-ceff}
+\end{align}
+following the same Randles-network derivation used in the companion
+metrology manuscript~\cite{clement2026linearity}. Under a linear potential
+ramp at rate $\nu$, the ideal forward/reverse CV slope is $1/R_{\mathrm{DC}}$
+and the ideal separation between the two legs is $\Delta I = 2\nu
+C_{\mathrm{eff}}$. Table~\ref{tab:ideal} reports the resulting nominal
+values for both loads at the $\nu=\SI{100}{\milli\volt\per\second}$ scan
+rate used in Section~\ref{sec:protocol}.
+
+\begin{table}[h]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\caption{Ideal (nominal-component) reference values for the two loads used
+in the dummy-cell protocol (Section~\ref{sec:protocol}).}
+\label{tab:ideal}
+\begin{threeparttable}
+\begin{tabular}{@{}p{4.0cm}p{1.9cm}p{1.9cm}@{}}
+\toprule
+Quantity & Randles cell & Resistor load \\
+\midrule
+$R_{\mathrm{DC}}$ (Eq.~\ref{eq:idc-rdc}) & \SI{10.56}{\kilo\ohm} & \SI{10.00}{\kilo\ohm} \\
+$C_{\mathrm{eff}}$ (Eq.~\ref{eq:idc-ceff}) & \SI{29.6}{\nano\farad} & n/a (no capacitive branch) \\
+Ideal CV slope $1/R_{\mathrm{DC}}$ & \SI{0.09470}{\micro\ampere\per\milli\volt} & \SI{0.10000}{\micro\ampere\per\milli\volt} \\
+Ideal slope ratio (Randles:resistor) & \multicolumn{2}{p{4.1cm}}{0.9470} \\
+Ideal CV loop separation $\Delta I$ at \SI{100}{\milli\volt\per\second} & \SI{5.9}{\nano\ampere} (sub-LSB) & 0 (purely resistive) \\
+Ideal CA/SWV/DPV response & \multicolumn{2}{p{4.1cm}}{Flat plateau at $\Delta V/R_{\mathrm{DC}}$; no Faradaic peak (Section~\ref{sec:outlook-real-solution})} \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}\footnotesize
+\item Both loads are passive $R$/$RC$ networks with no charge-transfer
+  reaction, so no method is expected to show a Faradaic peak; CA is
+  expected to settle to a flat plateau (no Cottrell decay) and SWV/DPV are
+  expected to report a differential current at or below the instrument's
+  noise floor. Section~\ref{sec:results} compares the instrument's measured
+  output against these values; the CV slope predictions above match the
+  measured slopes of Section~\ref{sec:results} to within
+  \SI{0.9}{\percent}, and the predicted sub-LSB loop separation is
+  consistent with the visually overlapping forward/reverse legs reported
+  there.
+\end{tablenotes}
+\end{threeparttable}
+\end{table}

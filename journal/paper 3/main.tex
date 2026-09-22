@@ -1,0 +1,79 @@
+%% Design and Implementation of an Object-Oriented Potentiostat With
+%% Performance Evaluation Using a Dummy Cell -- two DC signal-chain
+%% firmware defects in the HunStat2 AD5941 potentiostat, found by
+%% comparison against vendor reference code.
+%% Elsevier elsarticle class. Compile: pdflatex main; bibtex main; pdflatex main x2
+%%
+%% NOTE: author list follows the companion manuscripts (clement2026linearity,
+%% clement2026architecture) from the same group and the same instrument
+%% lineage. Confirm and amend before submission.
+
+\documentclass[preprint,12pt]{elsarticle}
+
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{threeparttable}
+\usepackage{url}
+\usepackage{siunitx}
+\sisetup{detect-weight=true,detect-family=true}
+\usepackage[table]{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta}
+
+\newcommand{\Rcal}{R_{\mathrm{CAL}}}
+\newcommand{\Rtia}{R_{\mathrm{TIA}}}
+
+\graphicspath{{./figures/}}
+
+\journal{HardwareX}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{Design and Implementation of an Object-Oriented Potentiostat With
+Performance Evaluation Using a Dummy Cell}
+
+\author[itb]{Krishudson Clement}
+\author[itb]{Kent Frumentius}
+\author[itb,inha]{Muhammad Ogin Hasanuddin}
+\author[itb]{Wervyan Shalannanda}
+\author[itb]{Isa Anshori\corref{cor}}
+\ead{isaa@staff.stei.itb.ac.id}
+\cortext[cor]{Corresponding author.}
+
+\affiliation[itb]{organization={Biomedical Engineering Study Program, School of
+    Electrical Engineering and Informatics, Institut Teknologi Bandung},
+  city={Bandung}, country={Indonesia}}
+\affiliation[inha]{organization={Inha University}, city={Incheon},
+  country={South Korea}}
+
+\input{sections/0-abstract}
+
+\end{frontmatter}
+
+\input{sections/1-introduction}
+\input{sections/2-instrument-design}
+\input{sections/3-methods}
+\input{sections/4-results}
+\input{sections/5-discussion}
+\input{sections/6-conclusion}
+
+\section*{Data and code availability}
+The pre-fix and post-fix firmware source for \texttt{C\_CA}/\texttt{C\_SWV}/
+\texttt{C\_DPV}, the code-comparison notes against the Analog Devices
+reference examples, and the dummy-cell validation data referenced from the
+companion manuscripts are available in the project repository's firmware
+source tree, \texttt{AD5941\_\allowbreak 25/}.
+
+\section*{Declaration of competing interest}
+The authors declare no competing financial interests or personal relationships
+that could have appeared to influence the work reported in this paper.
+
+\bibliographystyle{elsarticle-num}
+\bibliography{references}
+
+\end{document}

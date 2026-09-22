@@ -1,0 +1,11 @@
+# HunStat2 CV | E6 minimum viable step period, Estep=5 mV, -200..+200 mV
+# fRcal_set_ohm=200.0
+scan_rate_mV_s,step_period_ms,n_points,R_ohm,r2
+200,25.000,164,10607.019,0.99999872
+250,20.000,164,10605.540,0.99999859
+286,17.483,0,nan,nan
+333,15.015,0,nan,nan
+400,12.500,0,nan,nan
+500,10.000,0,nan,nan
+625,8.000,1,nan,nan
+1000,5.000,1,nan,nan

@@ -1,0 +1,137 @@
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Software architecture as a no-tradeoff reliability lever}
+The central empirical result -- a mean relative CV difference of
+$0.070\,\%$ between firmware versions, an order of magnitude below typical
+replicate variability for this instrument class -- supports a narrow but
+useful claim: at least for the scope refactored here, improving firmware
+software architecture did not cost measurement correctness. This matters
+specifically because the instrument's AFE is commercial, off-the-shelf
+silicon~\cite{devices2024ad5940}. In a discrete-op-amp potentiostat design,
+a change to the measurement code is entangled with the analog signal chain
+in ways that make ``did this change the measurement'' a hardware question
+requiring bench characterization of gain, offset, and noise. Here, the AFE's
+transimpedance gain, ADC, and DFT engine are fixed, characterized silicon;
+what the firmware controls is register sequencing and arithmetic, which
+means a refactor that is provably behavior-preserving at the code level
+(verbatim extraction, not rewriting) can be expected, and was confirmed, to
+be behavior-preserving at the measurement level too. This is the concrete
+version of the argument sketched in Section~\ref{sec:intro}: a commercial
+AFE converts ``is this instrument reliable'' from a mixed
+hardware-and-software question into one where software architecture is the
+dominant remaining lever, and that lever is nearly free to pull -- ordinary
+refactoring, not a hardware redesign.
+
+\subsection{Relationship to metrological validation}
+The companion manuscript~\cite{clement2026linearity} demonstrates a case
+where the opposite failure mode occurred: numerically well-behaved code
+($R^2 = 0.99999647$ on an Ohm's-law fit) hid a $424\,\%$ calibration
+error, because the bug was in a declared constant, not in the code's
+control flow or structure. Taken together, the two studies show that
+architectural quality and metrological accuracy are separate risk axes.
+Duplicated, poorly encapsulated code can compute a correct answer, as it
+did here; conversely, cleanly structured code can still compute a wrong
+answer if a physical constant is wrong, as the companion manuscript found.
+Neither property substitutes for the other, which is why this paper treats
+the refactor's validation as a check against regression on a
+\emph{previously established} correct baseline, not as a claim that
+architecture improvement alone establishes accuracy.
+
+\subsection{Outlook: validation on a real electrochemical solution}
+\label{sec:outlook-real-solution}
+Every result in this paper uses a passive dummy load -- the Randles
+network or the plain resistor -- by design: Section~\ref{sec:protocol}'s
+protocol exists specifically to isolate the firmware refactor's effect from
+any electrochemistry, since a dummy load's response is predictable from
+$R$ and $C$ alone and requires no independent reference measurement to
+validate against. That design choice is also this section's boundary: it
+means the refactor has not yet been exercised against an actual
+Faradaic system, and Figure~\ref{fig:before-after}'s straight CV traces
+should not be read as a claim about how the refactored firmware performs
+on real chemistry.
+
+\textbf{No solution-phase data was collected for this paper.}
+Figure~\ref{fig:dummy-vs-larutan} puts the two side by side, method for
+method, so the contrast is a single glance rather than a paragraph: the
+top row is this instrument's own real, measured dummy-cell output --
+literally the same Randles-cell data as
+Figure~\ref{fig:before-after}'s ``after'' traces, replotted here for direct
+comparison -- and the bottom row is the idealized, textbook-shape
+illustration of what a genuine redox solution's response looks like. The
+bottom row is not measured on the instrument, not a rigorous digital
+(finite-difference) simulation of the diffusion equation, and carries no
+quantitative claim; it exists only so the shape contrast in the top row is
+visible without requiring the reader to recall CV theory. Read
+column-by-column: the CV columns show the dummy cell's straight line
+against the larutan panel's closed-loop, peaked ``duck'' trace (Nernstian
+rise to $E_{pc}$/$E_{pa}$, diffusion-controlled tail, $\sim\!57/n$~mV
+separation) -- a shape the dummy cell structurally cannot produce, per the
+discussion above. The CA columns show the dummy cell settling to a flat,
+quantization-limited current against the larutan panel's Cottrell
+$i(t)\propto t^{-1/2}$ decay, since only a real concentration gradient
+relaxing at the electrode produces that decay. The SWV and DPV columns show
+the dummy cell's noise-floor-level, near-flat differential current against
+the larutan panels' symmetric bell-shaped peaks at $E_{1/2}$ -- a reasonable
+idealization even without a full diffusion treatment, since both are
+differential pulse techniques whose subtraction step is specifically
+designed to suppress background and tailing, so real pulse-voltammetry
+peaks on a reversible couple are, in practice, close to this shape.
+
+The natural next step is to repeat the identical protocol of
+Section~\ref{sec:protocol} -- same firmware builds, same four methods, same
+before/after and two-condition structure -- against a standard reversible
+redox couple (e.g.\ $\mathrm{K_3[Fe(CN)_6]}$/\allowbreak$\mathrm{K_4[Fe(CN)_6]}$ in
+supporting electrolyte) and compare the \emph{measured} result to
+Figure~\ref{fig:dummy-vs-larutan}'s bottom-row idealization, rather than to
+the dummy-cell top row. That experiment would extend this paper's claim
+from ``the refactor does not disturb the instrument's response to a
+passive load'' to ``the refactor does not disturb the instrument's
+response to a real analyte,'' which is the claim ultimately of interest to
+a user running this firmware on an actual sample. We flag this explicitly,
+and label the bottom row of Figure~\ref{fig:dummy-vs-larutan} explicitly,
+so that a reader comparing this paper against one that does include
+solution-phase data does not mistake the illustration for a measurement.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\linewidth]{fig3_dummy_vs_larutan}
+\caption{HunStat2 read-out, all four methods: dummy cell (top row,
+\textbf{real, measured} data, same instrument and firmware as
+Figure~\ref{fig:before-after}) vs.\ larutan / real solution (bottom row,
+\textbf{idealized illustration, not measured, not simulated}), with the
+key diagnostic feature of each method marked on the larutan panel. CV:
+straight line (dummy cell) vs.\ closed-loop Nernstian ``duck'' peak
+($E_{pc}$/$E_{pa}$ marked, $\Delta E_p\approx 57/n$~mV). CA:
+quantization-limited flat trace vs.\ Cottrell $t^{-1/2}$ decay from the
+potential step at $t{=}0$. SWV/DPV: noise-floor differential current vs.\
+symmetric peak at $E_p=E_{1/2}$ with peak height $\Delta I_p$ marked.}
+\label{fig:dummy-vs-larutan}
+\end{figure}
+
+\subsection{Limitations}
+The refactor was deliberately scoped to the duplication with the clearest,
+lowest-risk fix -- the DC-excitation methods (CA, DPV, SWV) and the two
+confirmed-dead subsystems. It does not address the audit's other findings:
+\texttt{C\_DataStorage} remains a fully public-field parameter store with no
+validation, the EIS and OCP classes were not brought into the same
+base-class structure (their register sequences differ enough from the
+DC-excitation path that doing so safely would need its own validation pass),
+and the two-hardware-abstraction-layer question -- separating register
+access from measurement logic entirely -- is unaddressed. These are the
+natural next steps, not omissions the results depend on. The equivalence
+claim itself is bounded by the instrument's own noise floor: SWV and DPV
+report differential currents near $10^{-7}$~A, where point-to-point
+variation from ordinary measurement noise is a larger fraction of the
+signal than for CV, so the before/after comparison for those two methods is
+qualitative (same shape, same order of magnitude, no directional bias)
+rather than quantified to the same precision as CV. The second-load
+corroboration in Section~\ref{sec:results} used one additional resistor
+value on the refactored firmware only, not a full before/after repeat at
+that load; it is offered as evidence the refactor generalizes, not as an
+independent replicate of the primary comparison. Finally, all measurements
+were taken on a single physical unit; run-to-run and unit-to-unit
+variability at the precision needed to distinguish a $0.07\,\%$ software
+effect from unit-to-unit hardware variability is outside this paper's scope
+and is the kind of question the companion manuscript's protocol is designed
+to answer.

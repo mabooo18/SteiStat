@@ -1,0 +1,76 @@
+%% Software architecture as a reliability variable -- HunStat2 / AD5941 firmware refactor and validation
+%% Elsevier elsarticle class. Compile: pdflatex main; bibtex main; pdflatex main x2
+%%
+%% NOTE: author list follows the companion manuscript (clement2026linearity) from
+%% the same group and the same instrument lineage. Confirm and amend before submission.
+
+\documentclass[preprint,12pt]{elsarticle}
+
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{threeparttable}
+\usepackage{url}
+\usepackage{siunitx}
+\sisetup{detect-weight=true,detect-family=true}
+\usepackage[table]{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta}
+
+\newcommand{\Rcal}{R_{\mathrm{CAL}}}
+\newcommand{\Rtia}{R_{\mathrm{TIA}}}
+
+\graphicspath{{./figures/}}
+
+\journal{HardwareX}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{Software architecture as a reliability variable: refactoring a
+low-cost {AD5940} potentiostat and validating it with a traceable
+dummy-cell protocol across {CV}, {CA}, {SWV}, and {DPV}}
+
+\author[itb]{Krishudson Clement}
+\author[itb]{Kent Frumentius}
+\author[itb,inha]{Muhammad Ogin Hasanuddin}
+\author[itb]{Wervyan Shalannanda}
+\author[itb]{Isa Anshori\corref{cor}}
+\ead{isaa@staff.stei.itb.ac.id}
+\cortext[cor]{Corresponding author.}
+
+\affiliation[itb]{organization={Biomedical Engineering Study Program, School of
+    Electrical Engineering and Informatics, Institut Teknologi Bandung},
+  city={Bandung}, country={Indonesia}}
+\affiliation[inha]{organization={Inha University}, city={Incheon},
+  country={South Korea}}
+
+\input{sections/0-abstract}
+
+\end{frontmatter}
+
+\input{sections/1-introduction}
+\input{sections/1b-instrument-design}
+\input{sections/2-methods}
+\input{sections/3-results}
+\input{sections/4-discussion}
+\input{sections/5-conclusion}
+
+\section*{Data and code availability}
+The pre-refactor and post-refactor firmware source, the refactor diff, and
+every raw CV/CA/SWV/DPV sweep reported here (both dummy-cell loads) are
+available in the project repository under
+\texttt{Software/\allowbreak update~7~(20~September~26)/\allowbreak
+AD5941\_\allowbreak 25/} and \texttt{oop\_\allowbreak validation/}.
+
+\section*{Declaration of competing interest}
+The authors declare no competing financial interests or personal relationships
+that could have appeared to influence the work reported in this paper.
+
+\bibliographystyle{elsarticle-num}
+\bibliography{references}
+
+\end{document}

@@ -1,0 +1,49 @@
+\begin{abstract}
+Low-cost, AD5940-based potentiostats are now a recognized instrument class,
+with several independently published designs and, as of 2026, a dedicated
+review of their architectures. That review treats potentiostat control
+software only functionally -- what it does -- and nowhere assesses how it is
+built, leaving firmware software-engineering quality unaddressed as a
+reliability variable in this literature. We audit the firmware of HunStat2,
+our own AD5941/RP2040 potentiostat built directly from the AD5940 datasheet,
+standard three-electrode potentiostat design practice, and the Analog
+Devices AD5940 evaluation-kit reference firmware, and find it partially
+object-oriented in a way that carries real risk: the AFE configuration,
+sampling, and current-conversion routine for three of its five electrochemical
+methods (chronoamperometry, square-wave voltammetry, differential pulse
+voltammetry) is duplicated verbatim three times, a live status-LED bug
+silently discards every caller's color argument, and two entire
+subsystems -- a command parser and a second electrochemical-methods
+implementation, together several hundred lines -- are unreachable, parallel
+duplicates of the code paths actually in use. We refactor: the triplicated
+routine is extracted into one shared base class inherited by all three
+methods; both dead subsystems are removed after tracing every call site to
+confirm they are never invoked; the LED bug is fixed. The refactor is not
+just argued but measured against real hardware: cyclic voltammetry,
+chronoamperometry, square-wave voltammetry, and differential pulse
+voltammetry were run against a traceable dummy cell on the physical
+instrument before and after the change. Cyclic voltammetry -- the least
+noise-sensitive of the four -- shows a mean relative difference of
+$0.070\,\%$ and a maximum of $2.83\,\%$ between the two firmware versions
+across a $305$-point sweep, consistent with ordinary measurement noise
+rather than a behavioral regression; chronoamperometry, square-wave, and
+differential pulse voltammetry show the same pattern. A second, independent
+real load (a plain $\SI{10}{\kilo\ohm}$ resistor in place of the Randles
+dummy cell) reproduces the expected current-voltage relationship on the
+refactored firmware alone, corroborating that the change generalizes beyond
+one specific load. The refactor also reduced compiled flash usage by
+$960$~bytes and removed dead code that a future contributor could otherwise
+have mistaken for the live implementation. We conclude that, for this class
+of instrument, software architecture quality can be improved substantially
+using ordinary refactoring technique -- extract superclass, dead-code
+elimination, bug fix -- with a measured, near-zero risk to the measurement
+correctness that is the instrument's actual purpose, making it a
+no-tradeoff reliability lever that the existing open-source-potentiostat
+literature has not evaluated.
+\end{abstract}
+
+\begin{keyword}
+potentiostat \sep low-cost instrumentation \sep dummy cell \sep
+software architecture \sep firmware refactoring \sep AD5940 \sep
+open-source hardware
+\end{keyword}

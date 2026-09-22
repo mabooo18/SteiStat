@@ -1,0 +1,309 @@
+\section{Results}
+\label{sec:results}
+
+\subsection{As found: a linearity pass concealing a 424\,\% error}
+\label{sec:trap}
+
+The instrument as received declared $\Rcal = \SI{10}{\kilo\ohm}$ in firmware
+while carrying the \SI{200}{\ohm} resistor in the \texttt{RCAL1} position. Under
+that configuration a cyclic voltammogram of the we-C reference cell was smooth,
+symmetric and highly linear, fitting Ohm's law with $R^2 = 0.99999647$. The
+recovered resistance was $\SI{55345}{\ohm}$ against a nominal
+$\Rnom$---an error of $+424.1\,\%$, equivalently reported currents low by a
+factor of $5.22$. We quote the error in recovered resistance throughout, since
+that is the quantity compared against the traceable reference; the corresponding
+current error is $-80.9\,\%$.
+
+To establish that the declared calibration constant was the cause rather than a
+correlate, it was swept deliberately over the board's available values while
+every other setting was held fixed, three replicates each
+(Table~\ref{tab:rcal}, Fig.~\ref{fig:trap}). The recovered resistance moved from
+$\SI{10606}{\ohm}$ to $\SI{55345}{\ohm}$, a factor of $5.22$, tracking the
+calibrated transimpedance $\hat{R}_{\mathrm{TIA}}$ exactly: the ratio of
+recovered resistances between any two conditions equals the ratio of their
+calibrated transimpedance values to within $0.1\,\%$. Restoring the declaration
+to \SI{200}{\ohm} returned the instrument to $+0.43\,\%$ reproducibly, including
+after passing through the erroneous settings.
+
+Over that sweep the coefficient of determination of the twelve individual fits
+lay between $0.99999635$ and $0.99999874$. The absolute error of the condition
+means spanned a factor of $982$; $R^2$ varied by $2.4\times10^{-6}$, and not
+monotonically. Every condition,
+including the $+424\,\%$ one, would pass any linearity-based acceptance
+threshold that has appeared in this literature. No feature of the
+voltammograms---noise, symmetry, curvature, offset---distinguishes them
+(Fig.~\ref{fig:trap}a).
+
+Two details of Table~\ref{tab:rcal} bear on correctability. First, declaring
+\SI{1}{\kilo\ohm} and \SI{4.7}{\kilo\ohm} produced nearly the same calibrated
+transimpedance ($\SI{2673.9}{\ohm}$ and $\SI{2680.5}{\ohm}$, differing by
+$0.25\,\%$) despite a $4.7\times$ difference in the declared value. The gain
+error is therefore \emph{not} proportional to the mis-declaration, as
+Eq.~(\ref{eq:rtiacal}) alone would predict. This is the saturation anticipated
+in Section~\ref{sec:traceability}: the calibration excitation is sized from the
+declared value, and once it over-drives the transimpedance output the measured
+ratio is set by the clipping level rather than by the resistor. Second, it
+follows that the error cannot be removed in post-processing by any factor
+derivable from the declared and fitted values. It has to be prevented at the
+source.
+
+\begin{table}[!t]
+\caption{Effect of the declared calibration-resistor value on recovered
+resistance. The fitted resistor is \SI{200}{\ohm} throughout; only the firmware
+declaration changes. Three replicate sweeps per condition,
+$-200$ to $+\SI{200}{\milli\volt}$, \SI{5}{\milli\volt} steps,
+\SI{200}{\milli\volt\per\second}.}
+\label{tab:rcal}
+\centering
+\footnotesize
+\begin{tabular}{r r r r r}
+\toprule
+\textbf{Declared} & \textbf{Calibrated} & \textbf{Recovered} &
+\textbf{Error vs.} & \textbf{Mean} \\
+$\Rcal$ ($\Omega$) & $\hat{R}_{\mathrm{TIA}}$ ($\Omega$) & $R$ ($\Omega$) &
+nominal (\%) & $R^{2}$ \\
+\midrule
+\textbf{200}$^{*}$ & 1093.0 & $10\,605.6 \pm 0.4$  & $+0.43$   & 0.99999861 \\
+1\,000                & 2673.9 & $25\,944.4 \pm 4.8$  & $+145.7$  & 0.99999831 \\
+4\,700                & 2680.5 & $26\,010.3 \pm 4.6$  & $+146.3$  & 0.99999831 \\
+10\,000               & 5703.1 & $55\,345.5 \pm 11.9$ & $+424.1$  & 0.99999647 \\
+\midrule
+\multicolumn{3}{l}{\emph{range across the series}} & $\times 982$ & $2.1\times10^{-6}$ \\
+\bottomrule
+\end{tabular}
+\\[2pt]
+\parbox{\linewidth}{\footnotesize $^{*}$ The correct declaration, matching the
+fitted resistor. Uncertainties are standard deviations over three replicates.}
+\end{table}
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=0.92\textwidth]{fig2_linearity_trap}
+\caption{Linearity is blind to gain error. (a) Voltammograms of the same
+reference cell under four declared calibration-resistor values; the dashed line
+is the response computed from component nominals. Only the \SI{200}{\ohm}
+declaration overlies it. The \SI{1}{\kilo\ohm} trace falls on the
+\SI{4.7}{\kilo\ohm} trace because the calibration excitation has saturated.
+(b) Absolute error and unexplained variance $100(1-R^{2})$ on the same
+logarithmic axis. The error spans three decades while $R^{2}$ is flat to
+$\sim\!10^{-6}$.}
+\label{fig:trap}
+\end{figure*}
+
+\subsection{Firmware defects identified}
+\label{sec:defects}
+
+Diagnosis of the scale error, and a systematic comparison of the failing method
+classes against the working sequencer-driven voltammetry engine and against the
+vendor reference examples, produced the eight defects in
+Table~\ref{tab:defects}. All were corrected; the corrections are the firmware
+state used for every subsequent measurement reported here.
+
+Three points are worth drawing out. The mis-declared constant (D1) was, on its
+own, correctable at run time---except that the user-facing command intended to
+set it wrote a parameter store that no measurement code reads, while the
+voltammetry and impedance paths read a separate global written only by an
+unreachable legacy handler (D2). The instrument therefore reported one
+calibration value through its parameter listing and used another, and the
+mismatch could not be fixed without recompiling. Even after D2 was repaired, the
+transimpedance calibration ran only once per power-up (D3), so a corrected
+declaration would not have taken effect until the next reset. Three separately
+minor faults thus combined into an error that was neither visible nor
+correctable from the host.
+
+\begin{table*}[!t]
+\caption{Firmware defects identified and corrected in this work.}
+\label{tab:defects}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}l >{\raggedright\arraybackslash}p{3.1cm} >{\raggedright\arraybackslash}p{4.2cm} >{\raggedright\arraybackslash}p{4.0cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Site} & \textbf{Defect} & \textbf{Observed effect} \\
+\midrule
+D1 & \texttt{AD5941\_25.ino} (global \texttt{fRcal}) & Declared $\Rcal$ = \SI{10}{\kilo\ohm}; fitted resistor is \SI{200}{\ohm} & Currents low by $5.22\times$, i.e.\ $+424\,\%$ in recovered resistance; invisible to $R^{2}$ \\
+D2 & \texttt{communication.cpp} (\texttt{c} command, parameter listing) & Command writes a parameter store no measurement path reads; voltammetry and impedance read a separate global written only by unreachable legacy code & $\Rcal$ not settable at run time; reported value $\neq$ value in use \\
+D3 & \texttt{rampTest.cpp} (\texttt{AppRAMPInit}) & Transimpedance calibration gated on a flag that latches after the first sweep & Calibration frozen at power-up; later corrections ignored \\
+D4 & \texttt{utilities.cpp} (predicate \texttt{Delay}) & Unbounded busy-wait on a hardware flag, polled at \SI{100}{\milli\second} & Impedance sweep hangs indefinitely; instrument unresponsive while USB still enumerates \\
+D5 & \texttt{c\_ca/c\_swv/c\_dpv.cpp} & \texttt{ADCPga = 1} selects \texttt{ADCPGA\_1P5} (gain 1.5) while the conversion divides by 1.0 & Silent $1.5\times$ current error in all three DC methods \\
+D6 & \texttt{c\_ca/c\_swv/c\_dpv.cpp} & \texttt{LPDACSW\_VZERO2PIN} closed, tying the $V_{\mathrm{zero}}$ buffer to the sense pin & Cell current sunk by the buffer instead of the transimpedance stage \\
+D7 & \texttt{c\_ca/c\_swv/c\_dpv.cpp} & Bias code added to rather than subtracted from the $V_{\mathrm{zero}}$ offset & Applied-potential polarity inverted \\
+D8 & \texttt{c\_ca/c\_swv/c\_dpv.cpp} & AFE never woken; the voltammetry path leaves it hibernating with the low-power loop off & Register writes succeed while the analog front end stays powered down \\
+\midrule
+D9 & \texttt{cv.cpp} (\texttt{\_AD5940\_Main}) & Unbounded wait on the sequencer completion flag & Instrument wedged partway through an extended sweep campaign and required a power cycle \\
+\bottomrule
+\end{tabular}
+\\[2pt]
+\parbox{\textwidth}{\footnotesize D5--D8 existed as three verbatim copies each,
+one per method class, and a fourth unreachable copy in a legacy free-function
+module. D9 was encountered during the measurement campaign reported here; after
+bounding the wait, the same condition reports \texttt{ERR,CV\_TIMEOUT} and the
+instrument remains responsive, though a power cycle is still required to restore
+full performance (Section~\ref{sec:invariance}).}
+\end{table*}
+
+\subsection{After correction: accuracy and repeatability}
+\label{sec:corrected}
+
+With the declaration corrected, ten replicate sweeps under identical settings
+recovered
+$R = (10\,605.2 \pm 1.6)~\Omega$
+against the nominal $\Rnom$, an error of $+0.428\,\%$ with individual replicates
+spanning $+0.403$ to $+0.452\,\%$ (Fig.~\ref{fig:repeat}). The relative standard
+deviation was $0.0152\,\%$, some thirty times inside the $0.5\,\%$ acceptance
+window of check V4, and the accuracy is well inside the $2\,\%$ window of V2.
+
+The calibrated transimpedance was $(1093.02 \pm 0.03)~\Omega$ across the same
+ten sweeps, a relative standard deviation of $0.0023\,\%$. The front end
+therefore measures its own gain to a few parts in $10^{5}$; the as-found defect
+was not a noisy calibration but a precise measurement against the wrong
+reference.
+
+Check V3 is informative about what limits the fit. The median root-mean-square
+residual was \SI{12.6}{\nano\ampere}, against a current quantisation step of
+$\mathrm{LSB} = \SI{50.8}{\nano\ampere}$ at the calibrated gain---that is,
+$0.25$~LSB. The residuals show no structure against potential
+(Fig.~\ref{fig:corrected}b). The voltammetry fit is thus limited by the
+converter, not by the analog chain, and $R^2$ has no further headroom to report:
+this is the regime in which a linearity statistic is least informative and most
+reassuring.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.92\linewidth]{fig3_corrected_fit}
+\caption{Corrected instrument against the reference cell. (a) A single sweep
+with the response computed from component nominals overlaid. (b) Fit residuals,
+which are unstructured and of order a quarter of the current quantisation
+step.}
+\label{fig:corrected}
+\end{figure}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.92\linewidth]{fig4_repeatability}
+\caption{Ten replicate sweeps under identical settings. The shaded band is
+$\pm1$ standard deviation; the dashed line is the value computed from component
+nominals. The offset from nominal is systematic, not scatter.}
+\label{fig:repeat}
+\end{figure}
+
+\subsection{Invariance across acquisition settings, and an operating limit}
+\label{sec:invariance}
+
+Check V5 requires the recovered resistance to be a property of the cell rather
+than of the settings. Across scan rates from \SIrange{25}{800}{\milli\volt\per\second},
+potential limits from $\pm100$ to $\pm\SI{600}{\milli\volt}$, and potential
+steps from \SIrange{5}{20}{\milli\volt}, the recovered resistance spanned
+$+0.411\,\%$ to $+0.485\,\%$ error---a total spread of $0.074$ percentage
+points, well inside the acceptance window, with $R^2 \ge 0.999994$ throughout
+(Fig.~\ref{fig:robust}a--c). The residual offset is common to every
+configuration, which is the signature of a scale term rather than a
+settings-dependent artefact. One further step size, \SI{2}{\milli\volt}, was
+attempted and failed; it falls below the timing limit established next rather
+than indicating a resolution boundary.
+
+One boundary emerged. Sweeps failed outright---returning no data, and in the
+more extreme cases the bounded-wait timeout---whenever the potential step period
+$E_{\mathrm{step}}/\nu$ fell below about \SI{19}{\milli\second}
+(Fig.~\ref{fig:robust}d). The threshold lies between the \SI{20}{\milli\second}
+condition, which succeeded, and the \SI{17.5}{\milli\second} condition, which did
+not. This is roughly $2.7\times$ the \SI{7}{\milli\second} settling delay the
+firmware configures, so the achievable sweep speed cannot be read off that
+parameter. The limit is on the step \emph{period}, not on scan rate as such:
+\SI{800}{\milli\volt\per\second} is accurate to $+0.435\,\%$ when taken in
+\SI{20}{\milli\volt} steps, while \SI{400}{\milli\volt\per\second} fails in
+\SI{5}{\milli\volt} steps. At \SI{5}{\milli\volt} resolution the usable maximum
+is \SI{250}{\milli\volt\per\second}.
+
+Bounding the acquisition wait (D9) prevents the instrument from wedging, but it
+does not fully restore the front end. Sweeps taken immediately after a timeout
+were reproducibly degraded---$R^{2}$ fell from $0.999999$ to about $0.9999$ at
+unchanged accuracy---and recovered only after a power cycle, which we confirmed
+twice. Reported measurements were therefore all acquired on a freshly reset
+instrument, and we recommend that a timeout be treated as requiring a reset
+rather than as a recoverable condition.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=0.95\textwidth]{fig5_robustness}
+\caption{Parameter invariance and the operating limit. (a)--(c) Recovered
+resistance error against scan rate, potential limit and potential step; the
+dashed line is the ten-replicate mean of Fig.~\ref{fig:repeat}. The total spread
+is $0.074$ percentage points. (d) Sweep outcome against potential step period:
+acquisition fails below about \SI{19}{\milli\second}, roughly $2.7\times$ the
+settling delay configured in firmware.}
+\label{fig:robust}
+\end{figure*}
+
+\subsection{The capacitive term is below the resolution floor}
+\label{sec:cap}
+
+Equation~(\ref{eq:ramp}) predicts that the forward and reverse branches separate
+by $\Delta I = 2\nu C_{\mathrm{eff}}$, which for
+$C_{\mathrm{eff}} = \SI{29.6}{\nano\farad}$ gives \SI{1.5}{\nano\ampere} at
+\SI{25}{\milli\volt\per\second} rising to \SI{47.4}{\nano\ampere} at
+\SI{800}{\milli\volt\per\second}. The current quantisation step is
+\SI{50.8}{\nano\ampere}. The predicted separation is therefore below one LSB at
+every scan rate the instrument supports, reaching at most $0.93$~LSB.
+
+Measured branch separations were consistent with this: across the scan-rate
+series they scattered between $-2$ and $+\SI{7}{\nano\ampere}$ with no
+dependence on scan rate, where a resolvable capacitance would have produced a
+proportional trend spanning \SIrange{1.5}{47}{\nano\ampere}. We therefore report
+that the voltammetry path constrains only the resistive part of the reference
+cell, and that recovering $C_{dl}$ from it is outside the instrument's present
+resolution rather than merely unattempted.
+
+\subsection{Method coverage}
+\label{sec:coverage}
+
+The same reference cell, board and session were used to exercise the remaining
+implemented methods (Table~\ref{tab:coverage}). Cyclic voltammetry is the only
+method for which we can report quantitative agreement.
+
+Chronoamperometry, square-wave and differential pulse voltammetry share a
+direct-register implementation of the low-power loop. After correcting D5--D8,
+the analog-to-digital converter demonstrably converts---every read completed
+without timeout, and a genuine transient follows each potential step---but the
+steady-state current does not depend on the applied potential. A step of
+$+\SI{200}{\milli\volt}$ across the \SI{10.56}{\kilo\ohm} reference should draw
+\SI{18.9}{\micro\ampere}; the measured steady state was pinned near the
+quantisation floor and, after the corrections, at a fixed offset, with the
+difference between $\pm\SI{200}{\milli\volt}$ steps below \SI{3}{\nano\ampere}
+against an expected \SI{37.9}{\micro\ampere}. Sweeping the transimpedance output
+topology over four representative filter-resistor settings and both output
+switch configurations---eight combinations, spanning a bypassed filter to the
+\SI{1}{\mega\ohm} setting---changed nothing, which places the fault upstream of
+the sensing stage, in the
+establishment of the cell drive, rather than in the conversion or scaling path
+that the voltammetry engine shares.
+
+Impedance spectroscopy did not complete a single frequency point. In a sweep
+configured for fifteen logarithmically spaced frequencies between
+\SI{100}{\hertz} and \SI{100}{\kilo\hertz}, the discrete Fourier transform ready
+flag failed to assert at every point the acquisition reached, and the sweep
+yielded no valid impedance value. Before correction
+of D4 this manifested as an indefinite hang; afterwards the sweep reports
+timeouts and returns control in \SI{50}{\second}. Open-circuit potential
+returned $-\SI{1820}{\milli\volt}$, exactly the negative of the converter
+reference, i.e.\ a saturated reading.
+
+\begin{table}[!t]
+\caption{Method coverage on the we-C reference cell. Only cyclic voltammetry is
+claimed as validated.}
+\label{tab:coverage}
+\centering
+\footnotesize
+\begin{tabular}{l l >{\raggedright\arraybackslash}p{3.6cm}}
+\toprule
+\textbf{Method} & \textbf{Status} & \textbf{Evidence} \\
+\midrule
+CV  & \textbf{Validated} & $+0.428\,\%$, \%RSD $0.0152$, invariant across settings \\
+CA  & Not functional & Steady-state current independent of applied potential \\
+SWV & Not functional & Shares the defective drive path with CA \\
+DPV & Not functional & Shares the defective drive path with CA \\
+EIS & Not functional & DFT ready flag never asserts; now fails in \SI{50}{\second} rather than hanging \\
+OCP & Not functional & Returns $-V_{\mathrm{ref}}$ (saturated) \\
+\bottomrule
+\end{tabular}
+\end{table}
